@@ -25,7 +25,7 @@ defmodule KRPCProtocol.Decoder.Test do
   ########
 
   test "Ping" do
-    result = {:ping, %{node_id: "414141"}}
+    result = {:ping, %{node_id: "AAA"}}
 
     assert KRPCProtocol.decode("d1:ad2:id3:AAAe1:q4:ping1:y1:qe") == result
     assert KRPCProtocol.decode("d1:ad2:id3:AAAe1:q4:ping1:t2:aa1:y1:qe") == result
