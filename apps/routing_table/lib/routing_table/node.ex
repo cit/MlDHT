@@ -18,21 +18,24 @@ defmodule RoutingTable.Node do
     GenServer.call(node_id, :stop)
   end
 
-  def find_node(node_id, target) do
-    GenServer.call(node_id, {:find_node, target})
+  def update_last_received(node_id) do
+    GenServer.call(node_id, :update_last_received)
+  end
+
+  def send_find_node(node_id, target) do
+    GenServer.cast(node_id, {:send_find_node, target})
   end
 
   def send_ping_reply(node_id) do
-    GenServer.call(node_id, :send_ping_reply)
+    GenServer.cast(node_id, :send_ping_reply)
+  end
+
+  def send_ping(pid) do
+    GenServer.cast(pid, :send_ping)
   end
 
   def review(node_id) do
     GenServer.call(node_id, :review)
-  end
-
-
-  def update_last_received(node_id) do
-    GenServer.call(node_id, :update_last_received)
   end
 
   ###
@@ -67,12 +70,10 @@ defmodule RoutingTable.Node do
     case (:os.system_time(:seconds) - state[:last_received]) do
       time when time >= 0 and time <= 500  -> ## 5 Minutes
         Logger.debug("[#{Hexate.encode(state[:node_id])}] idle 5 minutes")
-        Logger.debug("[#{Hexate.encode(state[:node_id])}] << ping")
+                GenServer.cast(self(), :send_ping)
 
-        payload = KRPCProtocol.encode(:ping, node_id: state[:node_id])
-        :gen_udp.send(state[:socket], state[:ip], state[:port], payload)
-      time when time > 500 and time <= 700  -> ## 5 Minutes
-        Logger.error "BAD NODE!!!1!"
+        time when time > 500 and time <= 700  -> ## 5 Minutes
+          Logger.error "BAD NODE!!!1!"
     end
 
     ## Start a new timer
@@ -81,8 +82,7 @@ defmodule RoutingTable.Node do
     {:noreply, state}
   end
 
-
-  def handle_info({:ping, node_id}, state) do
+  def handle_cast(:send_ping, state) do
     Logger.debug("[#{Hexate.encode(state[:node_id])}] << ping")
 
     payload = KRPCProtocol.encode(:ping, node_id: state[:own_node_id])
@@ -91,22 +91,22 @@ defmodule RoutingTable.Node do
     {:noreply, state}
   end
 
-  def handle_call({:find_node, target}, _from, state) do
+  def handle_cast({:send_find_node, target}, state) do
     Logger.debug("[#{Hexate.encode(state[:node_id])}] << find_node")
 
     payload = KRPCProtocol.encode(:find_node, node_id: state.node_id, target: target)
     :gen_udp.send(state.socket, state[:ip], state[:port], payload)
 
-    {:reply, :ok, state}
+    {:noreply, state}
   end
 
-  def handle_call(:send_ping_reply, _from, state) do
+  def handle_cast(:send_ping_reply, state) do
     Logger.debug("[#{Hexate.encode(state[:node_id])}] << ping_reply")
 
     payload =  KRPCProtocol.encode(:ping_reply, node_id: state.node_id)
     :gen_udp.send(state.socket, state[:ip], state[:port], payload)
 
-    {:reply, :ok, state}
+    {:noreply, state}
   end
 
   def handle_call(:update_last_received, _from, state) do

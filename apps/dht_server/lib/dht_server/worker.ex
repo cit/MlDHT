@@ -110,12 +110,11 @@ defmodule DHTServer.Worker do
 
     if node_pid = RoutingTable.get_node(remote.node_id, {ip, port}, socket) do
       Node.update_last_received(node_pid)
-      RoutingTable.print
 
       ## If we have less than 10 nodes in our routing table lets ask node for
       ## some close nodes
       if RoutingTable.size < 10 do
-        Node.find_node(node_pid, state[:node_id])
+        Node.send_find_node(node_pid, state[:node_id])
       end
     end
 
