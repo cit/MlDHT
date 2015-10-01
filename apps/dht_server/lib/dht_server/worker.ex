@@ -15,7 +15,7 @@ defmodule DHTServer.Worker do
   end
 
   def bootstrap do
-    GenServer.call(@name, :bootstrap)
+    GenServer.cast(@name, :bootstrap)
   end
 
   def init([]), do: init([port: 0])
@@ -41,11 +41,23 @@ defmodule DHTServer.Worker do
   end
 
 
-  def handle_call(:bootstrap, _from, state) do
-    payload = KRPCProtocol.encode(:ping, node_id: state[:node_id])
-    :gen_udp.send(state[:socket], {67, 215, 246, 10}, 6881, payload)
+  def handle_cast(:bootstrap, state) do
+    cfg = Application.get_all_env(:dht_server)
 
-    {:reply, :ok, state}
+    Enum.each(cfg[:bootstrap_nodes], fn(node) ->
+      {host, port} = node
+
+      case :inet.getaddr(String.to_char_list(host), :inet) do
+        {:ok, ip_addr} ->
+          payload = KRPCProtocol.encode(:ping, node_id: state[:node_id])
+          :gen_udp.send(state[:socket], ip_addr, port, payload)
+        {:error, code} ->
+          Logger.error "Couldn't resolve the hostname #{host}: #{inspect code}"
+      end
+
+    end)
+
+    {:noreply, state}
   end
 
   def handle_info({:udp, socket, ip, port, raw_data}, state) do
