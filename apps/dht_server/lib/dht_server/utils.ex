@@ -33,10 +33,10 @@ defmodule DHTServer.Utils do
   This function generates a 160 bit (20 byte) random node id as a
   binary.
   """
-  def gen_node_id() do
-    :random.seed(:erlang.now)
+  def gen_node_id do
+    :random.seed(:erlang.system_time(:milli_seconds))
 
-    Stream.repeatedly(fn -> :random.uniform 255 end)
+    Stream.repeatedly(fn -> :rand.uniform 255 end)
     |> Enum.take(20)
     |> :binary.list_to_bin
   end
