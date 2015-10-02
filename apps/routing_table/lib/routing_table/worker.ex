@@ -13,7 +13,7 @@ defmodule RoutingTable.Worker do
   ##############
 
   def start_link do
-    {:ok, server} = GenServer.start_link(__MODULE__, ["AAAAAAAAAAAAAAAAAAAA"], name: @name)
+    GenServer.start_link(__MODULE__, ["AAAAAAAAAAAAAAAAAAAA"], name: @name)
   end
 
   def node_id do
@@ -72,7 +72,7 @@ defmodule RoutingTable.Worker do
     |> Stream.with_index
     |> Enum.each(fn ({bucket, index}) ->
       size = Bucket.size(bucket)
-      Logger.debug "### Bucket #{index} ###"
+      Logger.debug "### Bucket #{index} ### (#{size})"
 
       Bucket.nodes(bucket)
       |> Enum.each(fn(node) ->
@@ -126,6 +126,10 @@ defmodule RoutingTable.Worker do
     end)
   end
 
+  @doc """
+  This function returns the pid of node if it exists in a bucket. If not it will
+  return nil.
+  """
   def get_node(node_id, state) do
     bucket_pid = get_bucket(node_id, state)
 
@@ -156,7 +160,7 @@ defmodule RoutingTable.Worker do
     end
   end
 
-  def reorganize([], buckets, self_node_id), do: buckets
+  def reorganize([], buckets, _self_node_id), do: buckets
   def reorganize([node_id | rest], buckets, self_node_id) do
     current_index  = length(buckets) - 2
     index          = find_bucket_index(buckets, self_node_id, node_id)
@@ -177,9 +181,8 @@ defmodule RoutingTable.Worker do
   end
 
   defp add(node_id, address, socket, state) do
-    index       = find_bucket_index(state[:buckets], state[:node_id], node_id)
-    bucket      = Enum.at(state[:buckets], index)
-    bucket_size = RoutingTable.Bucket.size(bucket)
+    index  = find_bucket_index(state[:buckets], state[:node_id], node_id)
+    bucket = Enum.at(state[:buckets], index)
 
     cond do
       ## If the bucket has still some space left, we can just add the node to
@@ -188,12 +191,12 @@ defmodule RoutingTable.Worker do
         node_pid = RoutingTable.Node.start_link(state[:node_id], {node_id, address, socket})
         {:ok} = Bucket.put(bucket, node_id, node_pid)
         {node_pid, state}
-      ## If the bucket is full and the node would belong to a bucket that is
-      ## far away from us, we will just drop that node. Go away!
+      ## If the bucket is full and the node would belong to a bucket that is far
+      ## away from us, we will just drop that node. Go away you filthy node!
       Bucket.is_full?(bucket) and index != index_last_bucket(state[:buckets]) ->
         Logger.error "Bucket #{index} is full -> drop #{Hexate.encode(node_id)}"
         {nil, state}
-      ## If the bucket is full but the node is close to us, we will reorganize
+      ## If the bucket is full but the node is closer to us, we will reorganize
       ## the nodes in the buckets and try again to add it to our bucket list.
       true ->
           buckets = state[:buckets] ++ [Bucket.start_link()]
@@ -205,7 +208,6 @@ defmodule RoutingTable.Worker do
           ## bucket even when we reorganized the bucket. In that case we also
           ## need to drop the node.
           if (Bucket.has_space?(bucket)) do
-            Logger.error "FOOBAR"
             add(node_id, address, socket, state)
           else
             Logger.error "Bucket #{index} is full -> drop #{Hexate.encode(node_id)} rare case drop"

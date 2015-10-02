@@ -89,7 +89,7 @@ defmodule DHTServer.Worker do
     {:noreply, state}
   end
 
-  def handle_message({:find_node, remote}, socket, ip, port, state) do
+  def handle_message({:find_node, remote}, _socket, _ip, _port, state) do
     debug_reply(remote.node_id, ">> find_node (ignore)")
 
     {:noreply, state}
@@ -99,13 +99,13 @@ defmodule DHTServer.Worker do
   # Incoming DHT Replies #
   ########################
 
-  def handle_message({:error, error}, socket, ip, port, state) do
+  def handle_message({:error, error}, _socket, _ip, _port, state) do
     Logger.error "[#{__MODULE__}] >> error (#{error.code}: #{error.msg})"
 
     {:noreply, state}
   end
 
-  def handle_message({:find_node_reply, remote}, socket, ip, port, state) do
+  def handle_message({:find_node_reply, remote}, _socket, _ip, _port, state) do
     debug_reply(remote.node_id, ">> find_node_reply")
 
     payload = KRPCProtocol.encode(:ping, node_id: state[:node_id])
