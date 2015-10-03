@@ -22,6 +22,12 @@ use Mix.Config
 # here (which is why it is important to import them last).
 #
 #     import_config "#{Mix.env}.exs"
+
+config :logger, :console,
+  level: :debug,
+  format: "$date $time [$level] $metadata$message\n",
+  metadata: [:user_id]
+
 config :dht_server,
 bootstrap_nodes: [
   {"router.bittorrent.com", 6881 },
