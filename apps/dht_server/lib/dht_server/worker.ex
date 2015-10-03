@@ -23,7 +23,7 @@ defmodule DHTServer.Worker do
   def init(port: port) do
     case :gen_udp.open port, [{:active, true}] do
       {:ok, socket} ->
-        node_id = Hexate.decode("fc8a15a2faf2734dbb1dc5f7afdc5c9beaeb1f59")
+        node_id = Utils.gen_node_id
         {:ok, port} = :inet.port(socket)
 
         Logger.debug "Init DHT Node"
@@ -64,12 +64,9 @@ defmodule DHTServer.Worker do
     # Logger.debug "[#{Utils.tuple_to_ipstr(ip, port)}]\n"
     # <> PrettyHex.pretty_hex(to_string(raw_data))
 
-    foo = raw_data
+    raw_data
     |> :binary.list_to_bin
     |> String.rstrip(?\n)
-
-    Logger.debug "BIN: #{inspect foo, limit: 1000}"
-    foo
     |> KRPCProtocol.decode
     |> handle_message(socket, ip, port, state)
   end
@@ -91,6 +88,12 @@ defmodule DHTServer.Worker do
 
   def handle_message({:find_node, remote}, _socket, _ip, _port, state) do
     debug_reply(remote.node_id, ">> find_node (ignore)")
+
+    {:noreply, state}
+  end
+
+  def handle_message({:get_peers, remote}, _socket, _ip, _port, state) do
+    debug_reply(remote.node_id, ">> get_peers (ignore)")
 
     {:noreply, state}
   end
