@@ -54,7 +54,6 @@ defmodule DHTServer.Worker do
         {:error, code} ->
           Logger.error "Couldn't resolve the hostname #{host}: #{inspect code}"
       end
-
     end)
 
     {:noreply, state}
@@ -79,15 +78,23 @@ defmodule DHTServer.Worker do
   def handle_message({:ping, remote}, socket, ip, port, state) do
     debug_reply(remote.node_id, ">> ping")
 
-    if node_pid = RoutingTable.get_node(remote.node_id, {ip, port}, socket) do
+    if node_pid = RoutingTable.get(remote.node_id, {ip, port}, socket) do
       Node.send_ping_reply(node_pid)
     end
 
     {:noreply, state}
   end
 
-  def handle_message({:find_node, remote}, _socket, _ip, _port, state) do
+  def handle_message({:find_node, remote}, socket, ip, port, state) do
     debug_reply(remote.node_id, ">> find_node (ignore)")
+
+    if node_pid = RoutingTable.get(remote.node_id, {ip, port}, socket) do
+      nodes = Enum.map(RoutingTable.closest_nodes(remote.target), fn(pid) ->
+        Node.to_tuple(pid)
+      end)
+      Logger.debug "#{inspect nodes}"
+      Node.send_find_node_reply(node_pid, nodes)
+    end
 
     {:noreply, state}
   end
@@ -108,8 +115,12 @@ defmodule DHTServer.Worker do
     {:noreply, state}
   end
 
-  def handle_message({:find_node_reply, remote}, _socket, _ip, _port, state) do
+  def handle_message({:find_node_reply, remote}, socket, ip, port, state) do
     debug_reply(remote.node_id, ">> find_node_reply")
+
+    if node_pid = RoutingTable.get(remote.node_id, {ip, port}, socket) do
+      Node.response_received(node_pid)
+    end
 
     payload = KRPCProtocol.encode(:ping, node_id: state[:node_id])
     Enum.map(remote.nodes, fn(node) ->
@@ -123,8 +134,8 @@ defmodule DHTServer.Worker do
   def handle_message({:ping_reply, remote}, socket, ip, port, state) do
     debug_reply(remote.node_id, ">> ping_reply")
 
-    if node_pid = RoutingTable.get_node(remote.node_id, {ip, port}, socket) do
-      Node.update_last_received(node_pid)
+    if node_pid = RoutingTable.get(remote.node_id, {ip, port}, socket) do
+      Node.response_received(node_pid)
 
       ## If we have less than 10 nodes in our routing table lets ask node for
       ## some close nodes
@@ -140,8 +151,15 @@ defmodule DHTServer.Worker do
   # Private Functions #
   #####################
 
+  # def find_node(target) do
+  #   Enum.map(RoutingTable.closest_nodes(remote.target), fn(pid) ->
+  #       Node.to_tuple(pid)
+  #     end)
+  # end
+
+
   def debug_reply(node_id, msg) do
-    Logger.debug "[#{__MODULE__}] [#{String.slice(Hexate.encode(node_id), 0, 5)}] #{msg}"
+    Logger.debug "[#{String.slice(Hexate.encode(node_id), 0, 5)}] #{msg}"
   end
 
 end

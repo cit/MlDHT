@@ -14,31 +14,20 @@ defmodule RoutingTable.Worker.Test do
   end
 
   test "If the size of the table is 0 if we add and delete a node" do
-    assert true == RoutingTable.add_node("BB", {{127, 0, 0, 1}, 6881}, 23) |> Process.alive?
-    RoutingTable.delete("BB")
+    RoutingTable.add("BB", {{127, 0, 0, 1}, 6881}, 23)
+    assert RoutingTable.size == 1
 
-    assert RoutingTable.size == 0
-  end
-
-  test "Add 8 nodes" do
-    nodes = ["AB", "7A", "EF", "FE", "20", "4D", "2C", "7D"]
-    Enum.map(nodes, fn(x) ->
-      assert true == RoutingTable.add_node(x, {{127, 0, 0, 1}, 6881}, x) |> Process.alive?
-    end)
-    assert RoutingTable.size == 8
-
-    Enum.map(nodes, fn(x) -> RoutingTable.delete(x) end)
+    RoutingTable.del("BB")
     assert RoutingTable.size == 0
   end
 
   test "get_node" do
-    # assert :ok == RoutingTable.add_node("BB", {{127, 0, 0, 1}, 6881}, 23)
+    assert :ok == RoutingTable.add("BB", {{127, 0, 0, 1}, 6881}, 23)
 
-    # pid = RoutingTable.get_node("BB")
-    # assert Kernel.is_pid(pid) == true
-    # assert RoutingTable.get_node("CC") == nil
+    assert RoutingTable.get("BB") |> Kernel.is_pid == true
+    assert RoutingTable.get("CC") == nil
 
-    # RoutingTable.delete("BB")
+    RoutingTable.del("BB")
   end
 
   test "If the function find_bucket works correctly" do
@@ -66,6 +55,7 @@ defmodule RoutingTable.Worker.Test do
       "527429ee61360b9d6a69bcce493fb12250be7ece",
       "a14e7753748539120787bce2b9815cc80af3174c",
       "003e8f4139a0174fb0f1983b87d76dfacd29b783",
+      "93990647deb3124dc843bb8ba61f035a7d093806",
     ]
 
     ## set a real node id
@@ -74,46 +64,30 @@ defmodule RoutingTable.Worker.Test do
 
     ## add all nodes
     Enum.map(nodes, fn(x) ->
-      RoutingTable.add_node(Hexate.decode(x), {{127, 0, 0, 1}, 6881}, 23)
+      RoutingTable.add(Hexate.decode(x), {{127, 0, 0, 1}, 6881}, 23)
     end)
 
-    RoutingTable.add_node(<<147,153,6,71,222,179,18,77,200,67,187,139,166,31,3,90,125,9,56,6>>, {{127, 0, 0, 1}, 6881}, nil)
-    RoutingTable.print
-    Enum.map(nodes, fn(x) -> RoutingTable.delete(Hexate.decode(x)) end)
-    RoutingTable.print
+    RoutingTable.print()
+    RoutingTable.closest_nodes(Hexate.decode "dac8fac14c12bb46e25f15d810bbd14267ad4eca")
+
+    Enum.map(nodes, fn(x) -> RoutingTable.del(Hexate.decode(x)) end)
+    # RoutingTable.print
 
     RoutingTable.node_id("AA")
   end
 
-  # test "foo" do
-  #   node = "9c499d098702f151d210fc79baa4ac167c1df78e"
-  #   nodes = [
-  #     "44e525ac31835b1de9803d2ed1b50fa3ed307819",
-  #     "50688393106b11f2ce01a34ef482c4755685a5c6",
-  #     "32f54e697351ff4aec29cdbaabf2fbe3467cc267",
-  #     "2c76a5209eb78316798079ce0e794bdd29e8d97a",
-  #     "08cf801483565911b86fde0ef92e30c706641fa7",b
-  #     "6d75e285902e2e537129dbcab26ade07edba714a",
-  #     "7eb937a06be9026ac3f8cc6510999069580d976a",
-  #     "7e1aa34d6c831ff5f18f3b7a3cc96af9bc2b69b7",
-  #   ]
+  test "Double entries" do
+    RoutingTable.add("BB", {{127, 0, 0, 1}, 6881}, 23)
+    RoutingTable.add("BB", {{127, 0, 0, 1}, 6881}, 23)
 
-  #   Enum.map(nodes, fn(x) ->
-  #     foo = RoutingTable.find_bucket(node, x)
-  #     Logger.debug(foo)
-  #   end)
-  # end
+    assert RoutingTable.size == 1
+    RoutingTable.del("BB")
+  end
 
-  #   test "foo 2" do
-  #   node = "9c499d098702f151d210fc79baa4ac167c1df78e"
-  #   nodes = [
+  test "foobar" do
+    assert RoutingTable.xor_compare("A", "a", "F", &(&1 > &2)) == false
+    assert RoutingTable.xor_compare("a", "B", "F", &(&1 > &2)) == true
+  end
 
-  #   ]
 
-  #   Enum.map(nodes, fn(x) ->
-  #     foo = RoutingTable.find_bucket(node, x)
-  #     Logger.debug(foo)
-  #   end)
-
-  # end
 end

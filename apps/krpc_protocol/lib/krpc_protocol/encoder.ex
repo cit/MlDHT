@@ -48,6 +48,21 @@ defmodule KRPCProtocol.Encoder do
     gen_dht_query "find_node", %{"id" => id, "target" => target}
   end
 
+  def encode(:find_node_reply, node_id: id, nodes: nodes) do
+    gen_dht_response %{"id" => id, "nodes" => compact_format(nodes)}
+  end
+
+
+  def compact_format(nodes), do: compact_format(nodes, "")
+  def compact_format([], result), do: result
+  def compact_format([head | tail], result) do
+    {node_id, ip, port} = head
+    result = result <> <<node_id :: size(160), ip :: size(48), port :: size(16)>>
+
+    compact_format(tail, result)
+  end
+
+
   #####
   ## GET_PEERS Query
   ##

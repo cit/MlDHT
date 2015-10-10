@@ -34,7 +34,6 @@ defmodule KRPCProtocol.Decoder do
   ## of it. If values are empty, it will create an empty list.
   # def decode(%{"y" => status, "r" => param_map}, result) when status == "r" do
   def decode(%{"y" => "r", "ip" => ip, "r" => %{"id" => node_id, "nodes" => nodes} }) do
-    Logger.debug "[#{__MODULE__}] find_node_reply detected #{inspect node_id}"
     {:find_node_reply, %{ip: ip, node_id: node_id,
                          nodes: extract_nodes(nodes)}}
   end
