@@ -2,32 +2,28 @@ defmodule KRPCProtocol.Decoder.Test do
   use ExUnit.Case, async: true
   doctest KRPCProtocol.Decoder
 
+  def node_id,   do: String.duplicate("a", 20)
+  def info_hash, do: String.duplicate("b", 20)
+
   ##################
   # Error Messages #
   ##################
 
-  test "202 Error Message" do
-    result = {:error, %{code: 202, msg: "Server Error"}}
-
+  test "Error Messages" do
+    result = {:error, %{code: 202, msg: "Server Error", tid: "aa"}}
     assert KRPCProtocol.decode("d1:eli202e12:Server Errore1:t2:aa1:y1:ee") == result
-    assert KRPCProtocol.decode("d1:eli202e12:Server Errore1:y1:ee") == result
-  end
 
-  test "201 Generic Error Message" do
-    result = {:error, %{code: 201, msg: "A Generic Error Ocurred"}}
-
+    result = {:error, %{code: 201, msg: "A Generic Error Ocurred", tid: "aa"}}
     assert KRPCProtocol.decode("d1:eli201e23:A Generic Error Ocurrede1:t2:aa1:y1:ee") == result
-    assert KRPCProtocol.decode("d1:eli201e23:A Generic Error Ocurrede1:y1:ee") == result
   end
+
 
   ########
   # Ping #
   ########
 
   test "Ping" do
-    result = {:ping, %{node_id: "AAA"}}
-
-    assert KRPCProtocol.decode("d1:ad2:id3:AAAe1:q4:ping1:y1:qe") == result
+    result = {:ping, %{node_id: "AAA", tid: "aa"}}
     assert KRPCProtocol.decode("d1:ad2:id3:AAAe1:q4:ping1:t2:aa1:y1:qe") == result
   end
 
@@ -37,17 +33,8 @@ defmodule KRPCProtocol.Decoder.Test do
   ##############
 
   test "Ping Reply" do
-    result = {:ping_reply, %{node_id: "AAAAAAAAAAAAAAAAAAAA"}}
+    result = {:ping_reply, %{node_id: "AAAAAAAAAAAAAAAAAAAA", tid: "aa"}}
     bin = "d1:rd2:id20:AAAAAAAAAAAAAAAAAAAAe1:t2:aa1:y1:re"
-    assert KRPCProtocol.decode(bin) == result
-
-    bin = "d1:rd2:id20:AAAAAAAAAAAAAAAAAAAAe1:y1:re"
-    assert KRPCProtocol.decode(bin) == result
-
-    bin = "d1:rd2:id20:AAAAAAAAAAAAAAAAAAAA1:v3:ABCe1:y1:re"
-    assert KRPCProtocol.decode(bin) == result
-
-    bin = "d1:rd2:id20:AAAAAAAAAAAAAAAAAAAAe1:v3:ABC1:y1:re"
     assert KRPCProtocol.decode(bin) == result
   end
 
@@ -56,15 +43,15 @@ defmodule KRPCProtocol.Decoder.Test do
   #############
 
   test "Find Node" do
-    result = {:find_node, %{node_id: "AAA", target: "BBB"}}
+    result = {:find_node, %{node_id: "AAA", target: "BBB", tid: "aa"}}
     bin = "d1:ad2:id3:AAA6:target3:BBBe1:q9:find_node1:t2:aa1:y1:qe"
 
     assert KRPCProtocol.decode(bin) == result
   end
 
   test "Get_Peers request" do
-    result = {:get_peers, %{node_id: "AAA", info_hash: "BBB"}}
-    bin = "d1:ad2:id3:AAA9:info_hash3:BBBe1:q9:get_peers1:y1:qe"
+    result = {:get_peers, %{node_id: "AAA", info_hash: "BBB", tid: "aa"}}
+    bin = "d1:ad2:id3:AAA9:info_hash3:BBBe1:q9:get_peers1:t2:aa1:y1:qe"
 
     assert KRPCProtocol.decode(bin) == result
   end

@@ -35,7 +35,6 @@ defmodule RoutingTable.Node do
     GenServer.call(pid, :is_questionable?)
   end
 
-
   def response_received(node_id) do
     GenServer.call(node_id, :response_received)
   end
@@ -44,8 +43,8 @@ defmodule RoutingTable.Node do
     GenServer.cast(node_id, {:send_find_node, target})
   end
 
-  def send_ping_reply(node_id) do
-    GenServer.cast(node_id, :send_ping_reply)
+  def send_ping_reply(node_id, tid) do
+    GenServer.cast(node_id, {:send_ping_reply, tid})
   end
 
   def send_ping(pid) do
@@ -60,6 +59,10 @@ defmodule RoutingTable.Node do
     GenServer.call(pid, :last_time_responded)
   end
 
+  def last_time_queried(pid) do
+    GenServer.call(pid, :last_time_queried)
+  end
+
   def to_tuple(pid) do
     GenServer.call(pid, :to_tuple)
   end
@@ -71,18 +74,19 @@ defmodule RoutingTable.Node do
   def init([own_node_id, node_tuple]) do
     {node_id, {ip, port}, socket} = node_tuple
 
-    {:ok, %{
-        :own_node_id => own_node_id,
-        :node_id     => node_id,
-        :ip          => ip,
-        :port        => port,
-        :socket      => socket,
-        :goodness    => :good,
+    {:ok,
+     %{
+       :own_node_id => own_node_id,
+       :node_id     => node_id,
+       :ip          => ip,
+       :port        => port,
+       :socket      => socket,
+       :goodness    => :good,
 
-        ## Timer
-        :last_response_rcv => :os.system_time(:seconds),
-        :last_query_snd    => :os.system_time(:seconds)
-        }
+       ## Timer
+       :last_response_rcv => :os.system_time(:seconds),
+       :last_query_snd    => 0
+     }
     }
   end
 
@@ -114,6 +118,10 @@ defmodule RoutingTable.Node do
     {:reply, :os.system_time(:seconds) - state[:last_response_rcv], state}
   end
 
+  def handle_call(:last_time_queried, _from, state) do
+    {:reply, state[:last_query_snd], state}
+  end
+
   def handle_call(:to_tuple, _from, state) do
     {:reply, {state[:node_id], state[:ip], state[:port]}, state}
   end
@@ -136,10 +144,10 @@ defmodule RoutingTable.Node do
   end
 
   def handle_cast({:send_find_node, target}, state) do
-    Logger.debug("[#{Hexate.encode(state[:node_id])}] << find_node")
+    Logger.debug("[#{Hexate.encode(state.node_id)}] << find_node")
 
-    payload = KRPCProtocol.encode(:find_node, node_id: state.own_node_id, target: target)
-    :gen_udp.send(state.socket, state[:ip], state[:port], payload)
+    payload = KRPCProtocol.encode(:find_node, node_id: state.own_node_id, target: state.own_node_id)
+    :gen_udp.send(state.socket, state.ip, state.port, payload)
 
     {:noreply, %{state | :last_query_snd => :os.system_time(:seconds)}}
   end
@@ -158,10 +166,10 @@ defmodule RoutingTable.Node do
     {:noreply, state}
   end
 
-  def handle_cast(:send_ping_reply, state) do
+  def handle_cast({:send_ping_reply, tid}, state) do
     Logger.debug("[#{Hexate.encode(state[:node_id])}] << ping_reply")
 
-    payload =  KRPCProtocol.encode(:ping_reply, node_id: state.own_node_id)
+    payload =  KRPCProtocol.encode(:ping_reply, tid: tid, node_id: state.own_node_id)
     :gen_udp.send(state.socket, state[:ip], state[:port], payload)
 
     {:noreply, state}

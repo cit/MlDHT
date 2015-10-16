@@ -30,11 +30,10 @@ defmodule DHTServer.Worker do
         Logger.debug "Node-ID: #{Hexate.encode node_id}"
         Logger.debug "UDP Port:#{port}"
 
-        ## start bucket manager genserver
+        ## Setup RoutingTable
         RoutingTable.node_id(node_id)
-        RoutingTable.print
 
-        {:ok, [node_id: node_id, socket: socket]}
+        {:ok, %{node_id: node_id, socket: socket}}
       {:error, reason} ->
         {:stop, reason}
     end
@@ -44,15 +43,14 @@ defmodule DHTServer.Worker do
   def handle_cast(:bootstrap, state) do
     cfg = Application.get_all_env(:dht_server)
 
-    Enum.each(cfg[:bootstrap_nodes], fn(node) ->
-      {host, port} = node
+    Enum.map(cfg[:bootstrap_nodes], fn(node) ->
+      {_, host, port} = node
 
       case :inet.getaddr(String.to_char_list(host), :inet) do
         {:ok, ip_addr} ->
-          payload = KRPCProtocol.encode(:ping, node_id: state[:node_id])
-          :gen_udp.send(state[:socket], ip_addr, port, payload)
-        {:error, code} ->
-          Logger.error "Couldn't resolve the hostname #{host}: #{inspect code}"
+           payload = KRPCProtocol.encode(:ping, node_id: state[:node_id])
+           :gen_udp.send(state[:socket], ip_addr, port, payload)
+        {:error, _code} -> Logger.error "Couldn't resolve the hostname #{host}"
       end
     end)
 
@@ -79,20 +77,19 @@ defmodule DHTServer.Worker do
     debug_reply(remote.node_id, ">> ping")
 
     if node_pid = RoutingTable.get(remote.node_id, {ip, port}, socket) do
-      Node.send_ping_reply(node_pid)
+      Node.send_ping_reply(node_pid, remote.tid)
     end
 
     {:noreply, state}
   end
 
   def handle_message({:find_node, remote}, socket, ip, port, state) do
-    debug_reply(remote.node_id, ">> find_node (ignore)")
+    Logger.debug "[#{Hexate.encode(remote.node_id)}] >> find_node"
 
     if node_pid = RoutingTable.get(remote.node_id, {ip, port}, socket) do
       nodes = Enum.map(RoutingTable.closest_nodes(remote.target), fn(pid) ->
         Node.to_tuple(pid)
       end)
-      Logger.debug "#{inspect nodes}"
       Node.send_find_node_reply(node_pid, nodes)
     end
 
@@ -100,7 +97,7 @@ defmodule DHTServer.Worker do
   end
 
   def handle_message({:get_peers, remote}, _socket, _ip, _port, state) do
-    debug_reply(remote.node_id, ">> get_peers (ignore)")
+    Logger.debug "[#{Hexate.encode(remote.node_id)}] >> get_peers (ignore)"
 
     {:noreply, state}
   end
@@ -116,23 +113,24 @@ defmodule DHTServer.Worker do
   end
 
   def handle_message({:find_node_reply, remote}, socket, ip, port, state) do
-    debug_reply(remote.node_id, ">> find_node_reply")
+    Logger.debug "[#{Hexate.encode(remote.node_id)}] >> find_node_reply"
 
     if node_pid = RoutingTable.get(remote.node_id, {ip, port}, socket) do
       Node.response_received(node_pid)
     end
 
+    ## Ping all nodes
     payload = KRPCProtocol.encode(:ping, node_id: state[:node_id])
     Enum.map(remote.nodes, fn(node) ->
-      {ip, port} = node
-      :gen_udp.send(state[:socket], Utils.ipstr_to_tuple(ip), port, payload)
+      {_id, {ip, port}} = node
+      :gen_udp.send(state[:socket], ip, port, payload)
     end)
 
     {:noreply, state}
   end
 
   def handle_message({:ping_reply, remote}, socket, ip, port, state) do
-    debug_reply(remote.node_id, ">> ping_reply")
+    Logger.debug "[#{Hexate.encode(remote.node_id)}] >> ping_reply"
 
     if node_pid = RoutingTable.get(remote.node_id, {ip, port}, socket) do
       Node.response_received(node_pid)
@@ -140,6 +138,7 @@ defmodule DHTServer.Worker do
       ## If we have less than 10 nodes in our routing table lets ask node for
       ## some close nodes
       if RoutingTable.size < 10 do
+        find_node(state[:node_id])
         Node.send_find_node(node_pid, state[:node_id])
       end
     end
@@ -151,11 +150,15 @@ defmodule DHTServer.Worker do
   # Private Functions #
   #####################
 
-  # def find_node(target) do
-  #   Enum.map(RoutingTable.closest_nodes(remote.target), fn(pid) ->
-  #       Node.to_tuple(pid)
-  #     end)
-  # end
+  def find_node(target) do
+    Enum.map(RoutingTable.closest_nodes(target), fn(pid) ->
+      queried = Node.last_time_queried(pid)
+      if (:os.system_time(:seconds) - queried) > 60 do
+        Node.send_find_node(pid, target)
+      end
+
+      end)
+  end
 
 
   def debug_reply(node_id, msg) do
