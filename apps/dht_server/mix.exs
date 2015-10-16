@@ -35,6 +35,8 @@ defmodule DHTServer.Mixfile do
   # Type `mix help deps` for more examples and options
   defp deps do
     [{:routing_table, in_umbrella: true},
-     {:krpc_protocol, in_umbrella: true}]
+     {:krpc_protocol, in_umbrella: true},
+     {:pretty_hex, "~> 0.0.1"},
+    ]
   end
 end
