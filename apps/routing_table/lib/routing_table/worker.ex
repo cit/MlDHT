@@ -18,7 +18,13 @@ defmodule RoutingTable.Worker do
   @review_time 60 * 5
 
   ## 15 minutes
-  @response_time 60 * 15
+  @response_time 60 * 5
+
+  ## 30 seconds
+  @neighbourhood_maintenance_time 30
+
+  ## 5 minutes
+  @bucket_maintenance_time 60 * 5
 
   ##############
   # Public API #
@@ -64,7 +70,6 @@ defmodule RoutingTable.Worker do
     GenServer.call(@name, {:closest_nodes, target})
   end
 
-
   def exists?(node_id) do
     GenServer.call(@name, {:exists?, node_id})
   end
@@ -78,7 +83,11 @@ defmodule RoutingTable.Worker do
     ## Start review timer
     Timer.start_link(self, :review, @review_time * 1000)
 
-    {:ok, [node_id: node_id, buckets: [[]] ]}
+    ## Start neighbourhood_maintenance timer
+    Timer.start_link(self, :neighbourhood_maintenance,
+                     @neighbourhood_maintenance_time * 1000)
+
+    {:ok, %{node_id: node_id, buckets: [[]] }}
   end
 
   def handle_info(:review, state) do
@@ -108,6 +117,27 @@ defmodule RoutingTable.Worker do
     {:noreply, [node_id: state[:node_id], buckets: new_buckets]}
   end
 
+  @doc """
+  This functions gets called by an external timer. This function takes a random
+  node from a random bucket and runs a find_node query with our own node_id as a
+  target. By that way, we try to find more and more nodes that are in our
+  neighbourhood.
+  """
+  def handle_info(:neighbourhood_maintenance, state) do
+    try do
+      node_pid = List.flatten(state[:buckets]) |> Enum.random
+      Node.send_find_node(node_pid, state[:node_id])
+    rescue
+      _ -> Logger.error "Neighbourhood Maintenance: No nodes in our routing table."
+    end
+
+    ## Restart the Timer
+    Timer.start_link(self, :neighbourhood_maintenance,
+                     @neighbourhood_maintenance_time * 1000)
+
+    {:noreply, state}
+  end
+
   def handle_call({:closest_nodes, target}, _from, state ) do
     list = List.flatten(state[:buckets])
     |> Enum.sort(fn(x, y) -> xor_compare(Node.id(x), Node.id(y), target, &(&1 < &2)) end)
@@ -132,7 +162,6 @@ defmodule RoutingTable.Worker do
 
       func.(xor_a, xor_b)
     end
-
   end
 
 
