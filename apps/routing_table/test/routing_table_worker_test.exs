@@ -89,5 +89,22 @@ defmodule RoutingTable.Worker.Test do
     assert RoutingTable.xor_compare("a", "B", "F", &(&1 > &2)) == true
   end
 
+  test "gen_node_id" do
+    node_id = String.duplicate("A", 20)
+    result  = RoutingTable.gen_node_id(8, node_id)
+
+    assert byte_size(result) == 20
+    assert String.first(result) == String.first(node_id)
+
+    result = RoutingTable.gen_node_id(152, node_id)
+    assert byte_size(result) == 20
+    assert String.starts_with?(result, String.duplicate("A", 19))
+
+    result = RoutingTable.gen_node_id(2, <<85, 65, 186, 187, 3, 126, 81, 52, 54, 56, 37, 227, 187, 54, 221, 198, 79, 194, 129, 1>>)
+    assert byte_size(result) == 20
+    # assert String.starts_with?(result, String.duplicate("A", 19))
+  end
+
+
 
 end

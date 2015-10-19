@@ -67,6 +67,10 @@ defmodule RoutingTable.Node do
     GenServer.call(pid, :to_tuple)
   end
 
+  def to_string(pid) do
+    GenServer.call(pid, :to_string)
+  end
+
   ###
   ## GenServer API
   ###
@@ -126,6 +130,13 @@ defmodule RoutingTable.Node do
     {:reply, {state[:node_id], state[:ip], state[:port]}, state}
   end
 
+  def handle_call(:to_string, _from, state) do
+    node_id = Hexate.encode(state[:node_id])
+    str     = "#Node<id: #{node_id}, goodness: #{state[:goodness]}>"
+
+    {:reply, str, state}
+  end
+
   def handle_call(:response_received, _from, state) do
     {:reply, :ok, %{state | :last_response_rcv => :os.system_time(:seconds)}}
   end
@@ -174,7 +185,5 @@ defmodule RoutingTable.Node do
 
     {:noreply, state}
   end
-
-
 
 end

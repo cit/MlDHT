@@ -1,0 +1,78 @@
+defmodule RoutingTable.Bucket do
+  alias RoutingTable.Bucket
+  alias RoutingTable.Node
+
+  require Logger
+
+  defstruct last_update: 0, nodes: []
+
+  @k_bucket 8
+
+  def new do
+    %Bucket{last_update: :os.system_time(:seconds)}
+  end
+
+  def size(bucket) do
+    Enum.count(bucket.nodes)
+  end
+
+  def age(bucket) do
+    :os.system_time(:seconds) - bucket.last_update
+  end
+
+  def is_full?(bucket) do
+    Enum.count(bucket.nodes) == @k_bucket
+  end
+
+  def has_space?(bucket) do
+    Enum.count(bucket.nodes) < @k_bucket
+  end
+
+  def add(bucket, element) when is_list(element) do
+    %{ Bucket.new |nodes: bucket.nodes ++ List.flatten(element)}
+  end
+
+  def add(bucket, element) do
+    %{ Bucket.new |nodes: bucket.nodes ++ [element]}
+  end
+
+  def filter(bucket, func) do
+    %{bucket | nodes: Enum.filter(bucket.nodes, func)}
+  end
+
+
+  def node_exists?(bucket, node_id) do
+    Enum.any?(bucket.nodes, fn(node_pid) -> node_id == Node.id(node_pid) end)
+  end
+
+  def get(bucket, node_id) do
+    Enum.find(bucket.nodes, fn(node_pid) -> Node.id(node_pid) == node_id end)
+  end
+
+  def del(bucket, node_id) do
+    nodes = Enum.filter(bucket.nodes, fn(pid) -> Node.id(pid) != node_id end)
+    %{bucket | nodes: nodes}
+  end
+
+
+  defimpl Inspect, for: Bucket do
+    def inspect(bucket, _) do
+      size  = Bucket.size(bucket)
+      age   = Bucket.age(bucket)
+
+      if size == 0 do
+        "#Bucket<size: #{size}, age: #{age}>"
+      else
+        nodes = Enum.map(bucket.nodes, fn(x) ->
+          "  " <> Node.to_string(x) <> "\n"
+        end)
+        """
+        #Bucket<size: #{size}, age: #{age}
+        #{nodes}>
+        """
+      end
+    end
+  end
+
+
+end

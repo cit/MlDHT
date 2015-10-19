@@ -87,12 +87,16 @@ defmodule RoutingTable.Worker do
     Timer.start_link(self, :neighbourhood_maintenance,
                      @neighbourhood_maintenance_time * 1000)
 
-    {:ok, %{node_id: node_id, buckets: [[]] }}
+    ## Start timer for bucket maintenance
+    Timer.start_link(self, :bucket_maintenance,
+                     @bucket_maintenance_time * 1000)
+
+    {:ok, %{node_id: node_id, buckets: [Bucket.new()]}}
   end
 
   def handle_info(:review, state) do
     new_buckets = Enum.map(state[:buckets], fn(bucket) ->
-      Enum.filter(bucket, fn(pid) ->
+      Bucket.filter(bucket, fn(pid) ->
         time = Node.last_time_responded(pid)
         cond do
           time < @response_time ->
@@ -124,11 +128,11 @@ defmodule RoutingTable.Worker do
   neighbourhood.
   """
   def handle_info(:neighbourhood_maintenance, state) do
-    try do
-      node_pid = List.flatten(state[:buckets]) |> Enum.random
-      Node.send_find_node(node_pid, state[:node_id])
-    rescue
-      _ -> Logger.error "Neighbourhood Maintenance: No nodes in our routing table."
+    case random_node(state[:buckets]) do
+      node_pid when is_pid(node_pid) ->
+        Node.send_find_node(node_pid, gen_node_id(152, state[:node_id]))
+      nil ->
+        Logger.info "Neighbourhood Maintenance: No nodes in our routing table."
     end
 
     ## Restart the Timer
@@ -138,8 +142,44 @@ defmodule RoutingTable.Worker do
     {:noreply, state}
   end
 
+  @doc """
+  This function gets called by an external timer. It iterates through all
+  buckets and checks if a bucket has less than 6 nodes and not updated during
+  the last 10 minutes. If this is the case, then we will pick a random node and
+  start a find_node query with a random_node from that bucket.
+  """
+  def handle_info(:bucket_maintenance, state) do
+    state[:buckets]
+    |> Stream.with_index
+    |> Enum.map(fn({bucket, index}) ->
+      if Bucket.age(bucket) >= 600 and Bucket.size(bucket) > 6 do
+
+        ## Pick a random node from our routing table and send a find_node
+        ## request with a target from that bucket
+        case random_node(state[:buckets]) do
+          node_pid when is_pid(node_pid) ->
+            Logger.debug "Index: #{index}"
+            Node.send_find_node(node_pid, gen_node_id(index, state[:node_id]))
+          nil ->
+            Logger.info "Bucket Maintenance: No nodes in our routing table."
+        end
+
+      end
+    end)
+
+    Timer.start_link(self, :bucket_maintenance, @bucket_maintenance_time * 1000)
+
+    {:noreply, state}
+  end
+
+  @doc """
+  This function returns the 8 closest nodes in our routing table to a specific
+  target.
+  """
   def handle_call({:closest_nodes, target}, _from, state ) do
-    list = List.flatten(state[:buckets])
+    list = state[:buckets]
+    |> Enum.map(fn(bucket) -> bucket.nodes end)
+    |> List.flatten
     |> Enum.sort(fn(x, y) -> xor_compare(Node.id(x), Node.id(y), target, &(&1 < &2)) end)
     |> Enum.slice(0..7)
 
@@ -147,39 +187,10 @@ defmodule RoutingTable.Worker do
   end
 
   @doc """
-  TODO
+  This functiowe will ren returns the pid for a specific node id. If the node
+  does not exists, it will try to add it to our routing table. Again, if this
+  was successful, this function returns the pid, otherwise nil.
   """
-  def xor_compare(node_id_a, node_id_b, target, func) do
-    << byte_a      :: 8, rest_a      :: bitstring >> = node_id_a
-    << byte_b      :: 8, rest_b      :: bitstring >> = node_id_b
-    << byte_target :: 8, rest_target :: bitstring >> = target
-
-    if (byte_a == byte_b) do
-      xor_compare(rest_a, rest_b, rest_target, func)
-    else
-      xor_a = Bitwise.bxor(byte_a, byte_target)
-      xor_b = Bitwise.bxor(byte_b, byte_target)
-
-      func.(xor_a, xor_b)
-    end
-  end
-
-
-  def distance(node_id_a, node_id_b), do: distance(node_id_a, node_id_b, [])
-
-  def distance("", "", result), do: List.to_string(result)
-
-  def distance(node_id_a, node_id_b, result) do
-    << byte_a :: 8, rest_a :: bitstring >> = node_id_a
-    << byte_b :: 8, rest_b :: bitstring >> = node_id_b
-
-    distance(rest_a, rest_b, result ++ [Bitwise.bxor(byte_a, byte_b)])
-  end
-
-  def handle_call({:exists?, node_id}, _from, state) do
-    {:reply, node_exists?(state[:buckets], node_id), state}
-  end
-
   def handle_call({:get, node_id}, _from, state) do
     {:reply, get_node(state[:buckets], node_id), state}
   end
@@ -200,7 +211,8 @@ defmodule RoutingTable.Worker do
 
 
   def handle_call(:size, _from, state) do
-    size = Enum.map( state[:buckets], fn(b)-> Enum.count(b) end)
+    size = state[:buckets]
+    |> Enum.map(fn(b)-> Bucket.size(b) end)
     |> Enum.reduce(fn(x, acc) -> x + acc end)
 
     {:reply, size, state}
@@ -215,12 +227,7 @@ defmodule RoutingTable.Worker do
     state[:buckets]
     |> Stream.with_index
     |> Enum.each(fn ({bucket, index}) ->
-      size = Enum.count(bucket)
-      Logger.debug "### Bucket #{index} ### (#{size})"
-
-      Enum.each(bucket, fn(pid) ->
-        Logger.debug "#{Hexate.encode(Node.id(pid))} #{inspect Node.goodness(pid)}"
-      end)
+      Logger.debug inspect(bucket)
     end)
 
     {:noreply, state}
@@ -245,12 +252,51 @@ defmodule RoutingTable.Worker do
     end
   end
 
-  ###
-  ## Private Functions
-  ###
+  #####################
+  # Private Functions #
+  #####################
 
   @doc """
-  TODO
+  This function gets two node ids, a target node id and a lambda function as an
+  argument. It compares the two node ids according to the XOR metric which is
+  closer to the target.
+
+    ## Example
+
+        iex> RoutingTable.Worker.xor_compare("A", "a", "F", &(&1 > &2))
+        false
+
+  """
+  def xor_compare(node_id_a, node_id_b, target, func) do
+    << byte_a      :: 8, rest_a      :: bitstring >> = node_id_a
+    << byte_b      :: 8, rest_b      :: bitstring >> = node_id_b
+    << byte_target :: 8, rest_target :: bitstring >> = target
+
+    if (byte_a == byte_b) do
+      xor_compare(rest_a, rest_b, rest_target, func)
+    else
+      xor_a = Bitwise.bxor(byte_a, byte_target)
+      xor_b = Bitwise.bxor(byte_b, byte_target)
+
+      func.(xor_a, xor_b)
+    end
+  end
+
+  @doc """
+  This function gets the number of bits and a node id as an argument and
+  generates a new node id. It copies the number of bits from the given node id
+  and the last bits it will generate randomly.
+  """
+  def gen_node_id(nr_of_bits, node_id) do
+    nr_rest_bits = 160 - nr_of_bits
+    << bits :: size(nr_of_bits),   _ :: size(nr_rest_bits) >> = node_id
+    << rest :: size(nr_rest_bits), _ :: size(nr_of_bits)   >> = :crypto.rand_bytes(20)
+
+    << bits :: size(nr_of_bits), rest :: size(nr_rest_bits)>>
+  end
+
+  @doc """
+  This function adds a new node to our routing table.
   """
   def add_node(my_node_id, buckets, node) do
     index  = find_bucket_index(buckets, my_node_id, elem(node, 0))
@@ -259,19 +305,20 @@ defmodule RoutingTable.Worker do
     cond do
       ## If the bucket has still some space left, we can just add the node to
       ## the bucket. Easy Peasy
-      Enum.count(bucket) < 8 ->
-        List.replace_at(buckets, index, bucket ++ [Node.start_link(my_node_id, node)])
+      Bucket.has_space?(bucket) ->
+        new_bucket = Bucket.add(bucket, Node.start_link(my_node_id, node))
+        List.replace_at(buckets, index, new_bucket)
 
         ## If the bucket is full and the node would belong to a bucket that is far
         ## away from us, we will just drop that node. Go away you filthy node!
-        Enum.count(bucket) == 8 and index != index_last_bucket(buckets) ->
+        Bucket.is_full?(bucket) and index != index_last_bucket(buckets) ->
         Logger.error "Bucket #{index} is full -> drop #{Hexate.encode(elem(node, 0))}"
       buckets
 
       ## If the bucket is full but the node is closer to us, we will reorganize
       ## the nodes in the buckets and try again to add it to our bucket list.
       true ->
-          buckets = reorganize(bucket, buckets ++ [[]], my_node_id)
+          buckets = reorganize(bucket.nodes, buckets ++ [Bucket.new()], my_node_id)
           add_node(my_node_id, buckets, node)
     end
   end
@@ -311,20 +358,31 @@ defmodule RoutingTable.Worker do
       new_bucket     = Enum.at(buckets, index)
 
       ## Remove the node from the current bucket
-      filtered_bucket = Enum.filter(current_bucket, fn(x) ->
-        Node.id(node) != Node.id(x)
-      end)
+      filtered_bucket = Bucket.del(current_bucket, Node.id(node))
 
       ## Then add it to the new_bucket
       buckets = List.replace_at(buckets, current_index, filtered_bucket)
-      |> List.replace_at(index, new_bucket ++ [node])
+      |> List.replace_at(index, Bucket.add(new_bucket, node))
     end
 
     reorganize(rest, buckets, my_node_id)
   end
 
   @doc """
-  Returns the index of the last bucket as integer.
+  This function returns a random node pid. If the routing table is empty it
+  returns nil.
+  """
+  def random_node(buckets) do
+    nodes = buckets
+    |> Enum.map(fn(bucket) -> bucket.nodes end)
+    |> List.flatten
+
+    unless Enum.empty?(nodes) do
+      Enum.random(nodes)
+    else
+      nil
+    end
+  end
 
   """
   def index_last_bucket(buckets) do
@@ -351,9 +409,7 @@ defmodule RoutingTable.Worker do
   """
   def node_exists?(buckets, node_id) do
     Enum.any?(buckets, fn(bucket) ->
-      Enum.any?(bucket, fn(node) ->
-        node_id == Node.id(node)
-      end)
+      Bucket.node_exists?(bucket, node_id)
     end)
   end
 
@@ -362,7 +418,7 @@ defmodule RoutingTable.Worker do
   """
   def del_node(buckets, node_id) do
     Enum.map(buckets, fn(bucket) ->
-      Enum.filter(bucket, fn(x) -> node_id != Node.id(x) end)
+      Bucket.del(bucket, node_id)
     end)
   end
 
@@ -371,9 +427,7 @@ defmodule RoutingTable.Worker do
   """
   def get_node(buckets, node_id) do
     Enum.map(buckets, fn(bucket) ->
-      Enum.find(bucket, fn(pid) ->
-        Node.id(pid) == node_id
-      end)
+      Bucket.get(bucket, node_id)
     end) |> Enum.find(fn(x) -> Kernel.is_pid(x) end)
   end
 
