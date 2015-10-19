@@ -6,6 +6,7 @@ defmodule RoutingTable.Worker do
 
   alias RoutingTable.Node
   alias RoutingTable.Timer
+  alias RoutingTable.Bucket
 
   #############
   # Constants #
@@ -23,8 +24,8 @@ defmodule RoutingTable.Worker do
   ## 30 seconds
   @neighbourhood_maintenance_time 30
 
-  ## 5 minutes
-  @bucket_maintenance_time 60 * 5
+  ## 3 minutes
+  @bucket_maintenance_time 60 * 3
 
   ##############
   # Public API #
@@ -36,10 +37,6 @@ defmodule RoutingTable.Worker do
 
   def add(remote_node_id, address, socket) do
     GenServer.call(@name, {:add, remote_node_id, address, socket})
-  end
-
-  def del(node_id) do
-    GenServer.call(@name, {:del, node_id})
   end
 
   def node_id(node_id) do
@@ -70,20 +67,16 @@ defmodule RoutingTable.Worker do
     GenServer.call(@name, {:closest_nodes, target})
   end
 
-  def exists?(node_id) do
-    GenServer.call(@name, {:exists?, node_id})
-  end
-
 
   #################
   # GenServer API #
   #################
 
   def init([node_id]) do
-    ## Start review timer
+    ## Start timer for peer review
     Timer.start_link(self, :review, @review_time * 1000)
 
-    ## Start neighbourhood_maintenance timer
+    ## Start timer for neighbourhood maintenance
     Timer.start_link(self, :neighbourhood_maintenance,
                      @neighbourhood_maintenance_time * 1000)
 
@@ -94,6 +87,11 @@ defmodule RoutingTable.Worker do
     {:ok, %{node_id: node_id, buckets: [Bucket.new()]}}
   end
 
+
+  @doc """
+  This function gets called by an external timer. This function checks when was
+  the last time a node has responded to our requests.
+  """
   def handle_info(:review, state) do
     new_buckets = Enum.map(state[:buckets], fn(bucket) ->
       Bucket.filter(bucket, fn(pid) ->
@@ -209,7 +207,9 @@ defmodule RoutingTable.Worker do
     end
   end
 
-
+  @doc """
+  This function returns the number of nodes in our routing table as an integer.
+  """
   def handle_call(:size, _from, state) do
     size = state[:buckets]
     |> Enum.map(fn(b)-> Bucket.size(b) end)
@@ -218,11 +218,10 @@ defmodule RoutingTable.Worker do
     {:reply, size, state}
   end
 
-  def handle_call({:del, node_id}, _from, state) do
-    {:reply, :ok, [node_id: state[:node_id],
-                   buckets: del_node(state[:buckets], node_id)]}
-  end
-
+  @doc """
+  This function is for debugging purpose only. It prints out the complete
+  routing table.
+  """
   def handle_cast(:print, state) do
     state[:buckets]
     |> Stream.with_index
@@ -233,6 +232,10 @@ defmodule RoutingTable.Worker do
     {:noreply, state}
   end
 
+  @doc """
+  Without parameters this function returns our own node id. If this function
+  gets a string as a parameter, it will set this as our node id.
+  """
   def handle_call(:node_id, _from, state) do
     {:reply, state[:node_id], state}
   end
@@ -241,6 +244,10 @@ defmodule RoutingTable.Worker do
     {:reply, :ok, [node_id: node_id, buckets: state[:buckets]]}
   end
 
+  @doc """
+  This function tries to add a new node to our routing table. If it was
+  sucessful, it returns the node pid and if not it will return nil.
+  """
   def handle_call({:add, node_id, address, socket}, _from, state) do
     unless node_exists?(state[:buckets], node_id) do
       node_tuple = {node_id, address, socket}
@@ -328,9 +335,10 @@ defmodule RoutingTable.Worker do
   number in which the node_id belongs as an integer. It counts the
   number of identical bits.
 
-  ## Example
-  iex> RoutingTable.find_bucket(<<0b11110000>>, <<0b11111111>>)
-  4
+    ## Example
+
+        iex> RoutingTable.find_bucket(<<0b11110000>>, <<0b11111111>>)
+        4
   """
   def find_bucket(node_id_a, node_id_b), do: find_bucket(node_id_a, node_id_b, 0)
   def find_bucket("", "", bucket), do: bucket
@@ -384,6 +392,9 @@ defmodule RoutingTable.Worker do
     end
   end
 
+
+  @doc """
+  Returns the index of the last bucket as integer.
   """
   def index_last_bucket(buckets) do
     Enum.count(buckets) -1
@@ -391,7 +402,6 @@ defmodule RoutingTable.Worker do
 
   @doc """
   TODO
-
   """
   def find_bucket_index(buckets, self_node_id, remote_node_id) do
     unless byte_size(self_node_id) == byte_size(remote_node_id) do
