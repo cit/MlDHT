@@ -25,7 +25,7 @@ defmodule RoutingTable.Worker do
   @neighbourhood_maintenance_time 30
 
   ## 3 minutes
-  @bucket_maintenance_time 60 * 3
+  @bucket_maintenance_time 60 * 1
 
   ##############
   # Public API #
@@ -150,8 +150,7 @@ defmodule RoutingTable.Worker do
     state[:buckets]
     |> Stream.with_index
     |> Enum.map(fn({bucket, index}) ->
-      if Bucket.age(bucket) >= 600 and Bucket.size(bucket) > 6 do
-
+      if Bucket.age(bucket) >= 600 and Bucket.size(bucket) < 6 do
         ## Pick a random node from our routing table and send a find_node
         ## request with a target from that bucket
         case random_node(state[:buckets]) do
