@@ -4,12 +4,12 @@ defmodule RoutingTable.Bucket do
 
   require Logger
 
-  defstruct last_update: 0, nodes: []
+  defstruct index: 0, last_update: 0, nodes: []
 
   @k_bucket 8
 
-  def new do
-    %Bucket{last_update: :os.system_time(:seconds)}
+  def new(index) do
+    %Bucket{index: index, last_update: :os.system_time(:seconds)}
   end
 
   def size(bucket) do
@@ -29,11 +29,11 @@ defmodule RoutingTable.Bucket do
   end
 
   def add(bucket, element) when is_list(element) do
-    %{ Bucket.new |nodes: bucket.nodes ++ List.flatten(element)}
+    %{ Bucket.new(bucket.index) |nodes: bucket.nodes ++ List.flatten(element)}
   end
 
   def add(bucket, element) do
-    %{ Bucket.new |nodes: bucket.nodes ++ [element]}
+    %{ Bucket.new(bucket.index) |nodes: bucket.nodes ++ [element]}
   end
 
   def filter(bucket, func) do
@@ -61,13 +61,13 @@ defmodule RoutingTable.Bucket do
       age   = Bucket.age(bucket)
 
       if size == 0 do
-        "#Bucket<size: #{size}, age: #{age}>"
+        "#Bucket<index: #{bucket.index}, size: #{size}, age: #{age}>"
       else
         nodes = Enum.map(bucket.nodes, fn(x) ->
           "  " <> Node.to_string(x) <> "\n"
         end)
         """
-        #Bucket<size: #{size}, age: #{age}
+        #Bucket<index #{bucket.index}, size: #{size}, age: #{age}
         #{nodes}>
         """
       end

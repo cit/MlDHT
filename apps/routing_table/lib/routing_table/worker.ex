@@ -84,7 +84,7 @@ defmodule RoutingTable.Worker do
     Timer.start_link(self, :bucket_maintenance,
                      @bucket_maintenance_time * 1000)
 
-    {:ok, %{node_id: node_id, buckets: [Bucket.new()]}}
+    {:ok, %{node_id: node_id, buckets: [Bucket.new(0)]}}
   end
 
 
@@ -325,7 +325,7 @@ defmodule RoutingTable.Worker do
       ## If the bucket is full but the node is closer to us, we will reorganize
       ## the nodes in the buckets and try again to add it to our bucket list.
       true ->
-          buckets = reorganize(bucket.nodes, buckets ++ [Bucket.new()], my_node_id)
+          buckets = reorganize(bucket.nodes, buckets ++ [Bucket.new(index + 1)], my_node_id)
           add_node(my_node_id, buckets, node)
     end
   end
