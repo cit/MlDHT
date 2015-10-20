@@ -67,6 +67,9 @@ defmodule RoutingTable.Worker do
     GenServer.call(@name, {:closest_nodes, target})
   end
 
+  def del(node_id) do
+    GenServer.call(@name, {:del, node_id})
+  end
 
   #################
   # GenServer API #
@@ -243,6 +246,15 @@ defmodule RoutingTable.Worker do
       {:reply, :ok, state}
     end
   end
+
+  @doc """
+  This function deletes a node according to its node id.
+  """
+  def handle_call({:del, node_id}, _from, state) do
+    {:reply, :ok, [node_id: state[:node_id],
+                   buckets: del_node(state[:buckets], node_id)]}
+  end
+
 
   @doc """
   This function is for debugging purpose only. It prints out the complete
