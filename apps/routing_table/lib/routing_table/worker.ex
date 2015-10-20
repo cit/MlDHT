@@ -218,20 +218,6 @@ defmodule RoutingTable.Worker do
   end
 
   @doc """
-  This function is for debugging purpose only. It prints out the complete
-  routing table.
-  """
-  def handle_cast(:print, state) do
-    state[:buckets]
-    |> Stream.with_index
-    |> Enum.each(fn ({bucket, index}) ->
-      Logger.debug inspect(bucket)
-    end)
-
-    {:noreply, state}
-  end
-
-  @doc """
   Without parameters this function returns our own node id. If this function
   gets a string as a parameter, it will set this as our node id.
   """
@@ -256,6 +242,19 @@ defmodule RoutingTable.Worker do
     else
       {:reply, :ok, state}
     end
+  end
+
+  @doc """
+  This function is for debugging purpose only. It prints out the complete
+  routing table.
+  """
+  def handle_cast(:print, state) do
+    state[:buckets]
+    |> Enum.each(fn (bucket) ->
+      Logger.debug inspect(bucket)
+    end)
+
+    {:noreply, state}
   end
 
   #####################
