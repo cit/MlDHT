@@ -138,7 +138,7 @@ defmodule KRPCProtocol.Encoder do
       oct1    :: size(8),
       oct2    :: size(8),
       oct3    :: size(8),
-      oct3    :: size(8),
+      oct4    :: size(8),
       port    :: size(16)>>
   end
 
