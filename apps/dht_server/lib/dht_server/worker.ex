@@ -6,6 +6,7 @@ defmodule DHTServer.Worker do
   alias DHTServer.Utils,     as: Utils
 
   alias RoutingTable.Node,   as: Node
+  alias RoutingTable.Search, as: Search
   alias RoutingTable.Worker, as: RoutingTable
 
   @name __MODULE__
@@ -17,6 +18,11 @@ defmodule DHTServer.Worker do
   def bootstrap do
     GenServer.cast(@name, :bootstrap)
   end
+
+  def search do
+    GenServer.cast(@name, :search)
+  end
+
 
   def init([]), do: init([port: 0])
 
@@ -33,12 +39,11 @@ defmodule DHTServer.Worker do
         ## Setup RoutingTable
         RoutingTable.node_id(node_id)
 
-        {:ok, %{node_id: node_id, socket: socket}}
+        {:ok, %{node_id: node_id, socket: socket, queries: []}}
       {:error, reason} ->
         {:stop, reason}
     end
   end
-
 
   def handle_cast(:bootstrap, state) do
     cfg = Application.get_all_env(:dht_server)
@@ -57,6 +62,20 @@ defmodule DHTServer.Worker do
     {:noreply, state}
   end
 
+  def handle_cast(:search, state) do
+    ## Ubuntu 15.10 (64 bit)
+    infohash = "3f19b149f53a50e14fc0b79926a391896eabab6f" |> Hexate.decode
+    nodes = RoutingTable.closest_nodes(infohash)
+
+    Logger.debug "#{inspect nodes}"
+
+    pid = Search.start_link(state[:node_id], infohash, nodes, state[:socket])
+    Search.start(pid)
+
+    {:noreply, %{state | queries: state.queries ++ [pid]}}
+  end
+
+
   def handle_info({:udp, socket, ip, port, raw_data}, state) do
     # Logger.debug "[#{Utils.tuple_to_ipstr(ip, port)}]\n"
     # <> PrettyHex.pretty_hex(to_string(raw_data))
@@ -66,6 +85,15 @@ defmodule DHTServer.Worker do
     |> String.rstrip(?\n)
     |> KRPCProtocol.decode
     |> handle_message(socket, ip, port, state)
+  end
+
+  #########
+  # Error #
+  #########
+
+  def handle_message({:error, error}, _socket, ip, port, state) do
+    payload = KRPCProtocol.encode(:error, code: error.code, msg: error.msg, tid: error.tid)
+    :gen_udp.send(state[:socket], ip, port, payload)
   end
 
 
@@ -106,7 +134,7 @@ defmodule DHTServer.Worker do
   # Incoming DHT Replies #
   ########################
 
-  def handle_message({:error, error}, _socket, _ip, _port, state) do
+  def handle_message({:error_reply, error}, _socket, _ip, _port, state) do
     Logger.error "[#{__MODULE__}] >> error (#{error.code}: #{error.msg})"
 
     {:noreply, state}
@@ -114,6 +142,12 @@ defmodule DHTServer.Worker do
 
   def handle_message({:find_node_reply, remote}, socket, ip, port, state) do
     Logger.debug "[#{Hexate.encode(remote.node_id)}] >> find_node_reply"
+
+    ## If this belongs to an active search, it is actuall a get_peers_reply
+    ## without a token. Does anyone read the fucking specification?
+    if Enum.any?(state.queries, fn(pid) -> Search.tid(pid) == remote.tid end) do
+      handle_message({:get_peer_reply, remote}, socket, ip, port, state)
+    end
 
     if node_pid = RoutingTable.get(remote.node_id, {ip, port}, socket) do
       Node.response_received(node_pid)
@@ -127,6 +161,30 @@ defmodule DHTServer.Worker do
     end)
 
     {:noreply, state}
+  end
+
+  def handle_message({:get_peer_reply, remote}, _socket, _ip, _port, state) do
+    Logger.debug "[#{Hexate.encode(remote.node_id)}] >> get_peer_reply"
+
+    new_queries = Enum.filter(state.queries, fn(pid) ->
+      if Search.tid(pid) == remote.tid do
+
+        if remote.values do
+          Logger.info "Found value: #{inspect remote.values}"
+        end
+
+        if Search.completed?(pid) do
+          Logger.debug "SEARCH COMPLETE!!!1!"
+          Search.stop(pid)
+          false
+        else
+          Search.reply(pid, remote, remote.nodes)
+          true
+        end
+      end
+    end)
+
+    {:noreply, %{state | queries: new_queries}}
   end
 
   def handle_message({:ping_reply, remote}, socket, ip, port, state) do

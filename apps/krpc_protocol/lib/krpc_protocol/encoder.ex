@@ -7,12 +7,7 @@ defmodule KRPCProtocol.Encoder do
   end
 
   defp gen_dht_query(command, tid, options) when is_map(options) do
-    Bencodex.encode %{
-      "y" => "q",
-      "t" => tid,
-      "q" => command,
-      "a" => options
-    }
+    Bencodex.encode %{"y" => "q", "t" => tid, "q" => command, "a" => options}
   end
 
   defp gen_dht_response(options) when is_map(options) do
@@ -20,11 +15,15 @@ defmodule KRPCProtocol.Encoder do
   end
 
   defp gen_dht_response(options, tid) when is_map(options) do
-    Bencodex.encode %{
-      "y" => "r",
-      "t" => tid,
-      "r" => options
-    }
+    Bencodex.encode %{"y" => "r", "t" => tid, "r" => options}
+  end
+
+  #########
+  # Error #
+  #########
+
+  def encode(:error, code: code, msg: msg, tid: tid) do
+    Bencodex.encode %{"y" => "e", "t" => tid, "e" => [code, msg]}
   end
 
   ###########
