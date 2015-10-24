@@ -157,7 +157,7 @@ defmodule RoutingTable.Node do
   def handle_cast({:send_find_node, target}, state) do
     Logger.debug("[#{Hexate.encode(state.node_id)}] << find_node")
 
-    payload = KRPCProtocol.encode(:find_node, node_id: state.own_node_id, target: state.own_node_id)
+    payload = KRPCProtocol.encode(:find_node, node_id: state.own_node_id, target: target)
     :gen_udp.send(state.socket, state.ip, state.port, payload)
 
     {:noreply, %{state | :last_query_snd => :os.system_time(:seconds)}}
