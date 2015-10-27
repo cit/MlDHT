@@ -101,8 +101,8 @@ defmodule KRPCProtocol.Encoder do
     gen_dht_response %{"id" => node_id}, tid
   end
 
-  def encode(:find_node_reply, node_id: id, nodes: nodes) do
-    gen_dht_response %{"id" => id, "nodes" => compact_format(nodes)}
+  def encode(:find_node_reply, node_id: id, nodes: nodes, tid: tid) do
+    gen_dht_response %{"id" => id, "nodes" => compact_format(nodes)}, tid
   end
 
 

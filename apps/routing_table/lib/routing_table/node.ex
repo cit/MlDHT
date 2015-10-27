@@ -51,8 +51,8 @@ defmodule RoutingTable.Node do
     GenServer.cast(pid, :send_ping)
   end
 
-  def send_find_node_reply(pid, nodes) do
-    GenServer.cast(pid, {:send_find_node_reply, nodes})
+  def send_find_node_reply(pid, tid, nodes) do
+    GenServer.cast(pid, {:send_find_node_reply, tid, nodes})
   end
 
   def last_time_responded(pid) do
@@ -167,10 +167,10 @@ defmodule RoutingTable.Node do
   # Replies #
   ###########
 
-  def handle_cast({:send_find_node_reply, nodes}, state) do
+  def handle_cast({:send_find_node_reply, tid, nodes}, state) do
     Logger.debug("[#{Hexate.encode(state[:node_id])}] << find_node_reply")
 
-    payload = KRPCProtocol.encode(:find_node_reply, node_id: state[:own_node_id], nodes: nodes)
+    payload = KRPCProtocol.encode(:find_node_reply, node_id: state[:own_node_id], nodes: nodes, tid: tid)
     Logger.debug "find_node_reply: #{inspect payload}"
     :gen_udp.send(state[:socket], state[:ip], state[:port], payload)
 

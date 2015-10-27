@@ -118,7 +118,7 @@ defmodule DHTServer.Worker do
       nodes = Enum.map(RoutingTable.closest_nodes(remote.target), fn(pid) ->
         Node.to_tuple(pid)
       end)
-      Node.send_find_node_reply(node_pid, nodes)
+      Node.send_find_node_reply(node_pid, remote.tid, nodes)
     end
 
     {:noreply, state}
