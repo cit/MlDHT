@@ -5,18 +5,30 @@ defmodule KRPCProtocol.Decoder.Test do
   def node_id,   do: String.duplicate("a", 20)
   def info_hash, do: String.duplicate("b", 20)
 
+  #####################
+  # Corrupted packets #
+  #####################
+
+  test "Invalid bencoded message" do
+    assert {:ignore, _} = KRPCProtocol.decode("abcdefgh")
+  end
+
+  test "Valid bencoded message, but not a valid DHT message" do
+    assert {:ignore, _} = KRPCProtocol.decode(<<100, 49, 58, 118, 52, 58, 76, 84, 1, 1, 101>>)
+  end
+
+
   ##################
   # Error Messages #
   ##################
 
   test "Error Messages" do
-    result = {:error, %{code: 202, msg: "Server Error", tid: "aa"}}
+    result = {:error_reply, %{code: 202, msg: "Server Error", tid: "aa"}}
     assert KRPCProtocol.decode("d1:eli202e12:Server Errore1:t2:aa1:y1:ee") == result
 
-    result = {:error, %{code: 201, msg: "A Generic Error Ocurred", tid: "aa"}}
+    result = {:error_reply, %{code: 201, msg: "A Generic Error Ocurred", tid: "aa"}}
     assert KRPCProtocol.decode("d1:eli201e23:A Generic Error Ocurrede1:t2:aa1:y1:ee") == result
   end
-
 
   ########
   # Ping #

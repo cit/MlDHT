@@ -30,18 +30,6 @@ defmodule RoutingTable.Worker.Test do
     RoutingTable.del("BB")
   end
 
-  test "If the function find_bucket works correctly" do
-    assert RoutingTable.find_bucket("abc", "bca") == 6
-    assert RoutingTable.find_bucket("bca", "abc") == 6
-
-    assert RoutingTable.find_bucket("AA", "aa") == 2
-    assert RoutingTable.find_bucket("aa", "AA") == 2
-
-    assert RoutingTable.find_bucket(<<0b00000010>>, <<0b00000010>>) == 8
-    assert RoutingTable.find_bucket(<<0b10000010>>, <<0b00000010>>) == 0
-    assert RoutingTable.find_bucket(<<0b11110000>>, <<0b11111111>>) == 4
-  end
-
   test "foo" do
     nodes = [
       "32f54e697351ff4aec29cdbaabf2fbe3467cc267",
@@ -84,26 +72,9 @@ defmodule RoutingTable.Worker.Test do
     RoutingTable.del("BB")
   end
 
-  test "foobar" do
-    assert RoutingTable.xor_compare("A", "a", "F", &(&1 > &2)) == false
-    assert RoutingTable.xor_compare("a", "B", "F", &(&1 > &2)) == true
-  end
 
-  test "gen_node_id" do
-    node_id = String.duplicate("A", 20)
-    result  = RoutingTable.gen_node_id(8, node_id)
 
-    assert byte_size(result) == 20
-    assert String.first(result) == String.first(node_id)
 
-    result = RoutingTable.gen_node_id(152, node_id)
-    assert byte_size(result) == 20
-    assert String.starts_with?(result, String.duplicate("A", 19))
-
-    result = RoutingTable.gen_node_id(2, <<85, 65, 186, 187, 3, 126, 81, 52, 54, 56, 37, 227, 187, 54, 221, 198, 79, 194, 129, 1>>)
-    assert byte_size(result) == 20
-    # assert String.starts_with?(result, String.duplicate("A", 19))
-  end
 
 
 

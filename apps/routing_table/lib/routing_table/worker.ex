@@ -7,6 +7,7 @@ defmodule RoutingTable.Worker do
   alias RoutingTable.Node
   alias RoutingTable.Timer
   alias RoutingTable.Bucket
+  alias RoutingTable.Distance
 
   #############
   # Constants #
@@ -131,7 +132,7 @@ defmodule RoutingTable.Worker do
   def handle_info(:neighbourhood_maintenance, state) do
     case random_node(state[:buckets]) do
       node_pid when is_pid(node_pid) ->
-        Node.send_find_node(node_pid, gen_node_id(152, state[:node_id]))
+        Node.send_find_node(node_pid, Distance.gen_node_id(152, state[:node_id]))
       nil ->
         Logger.info "Neighbourhood Maintenance: No nodes in our routing table."
     end
@@ -159,7 +160,7 @@ defmodule RoutingTable.Worker do
         case random_node(state[:buckets]) do
           node_pid when is_pid(node_pid) ->
             Logger.debug "Index: #{index}"
-            Node.send_find_node(node_pid, gen_node_id(index, state[:node_id]))
+            Node.send_find_node(node_pid, Distance.gen_node_id(index, state[:node_id]))
           nil ->
             Logger.info "Bucket Maintenance: No nodes in our routing table."
         end
@@ -180,7 +181,7 @@ defmodule RoutingTable.Worker do
     list = state[:buckets]
     |> Enum.map(fn(bucket) -> bucket.nodes end)
     |> List.flatten
-    |> Enum.sort(fn(x, y) -> xor_compare(Node.id(x), Node.id(y), target, &(&1 < &2)) end)
+    |> Enum.sort(fn(x, y) -> Distance.xor_cmp(Node.id(x), Node.id(y), target, &(&1 < &2)) end)
     |> Enum.slice(0..7)
 
     {:reply, list, state}
@@ -274,45 +275,6 @@ defmodule RoutingTable.Worker do
   #####################
 
   @doc """
-  This function gets two node ids, a target node id and a lambda function as an
-  argument. It compares the two node ids according to the XOR metric which is
-  closer to the target.
-
-    ## Example
-
-        iex> RoutingTable.Worker.xor_compare("A", "a", "F", &(&1 > &2))
-        false
-
-  """
-  def xor_compare(node_id_a, node_id_b, target, func) do
-    << byte_a      :: 8, rest_a      :: bitstring >> = node_id_a
-    << byte_b      :: 8, rest_b      :: bitstring >> = node_id_b
-    << byte_target :: 8, rest_target :: bitstring >> = target
-
-    if (byte_a == byte_b) do
-      xor_compare(rest_a, rest_b, rest_target, func)
-    else
-      xor_a = Bitwise.bxor(byte_a, byte_target)
-      xor_b = Bitwise.bxor(byte_b, byte_target)
-
-      func.(xor_a, xor_b)
-    end
-  end
-
-  @doc """
-  This function gets the number of bits and a node id as an argument and
-  generates a new node id. It copies the number of bits from the given node id
-  and the last bits it will generate randomly.
-  """
-  def gen_node_id(nr_of_bits, node_id) do
-    nr_rest_bits = 160 - nr_of_bits
-    << bits :: size(nr_of_bits),   _ :: size(nr_rest_bits) >> = node_id
-    << rest :: size(nr_rest_bits), _ :: size(nr_of_bits)   >> = :crypto.rand_bytes(20)
-
-    << bits :: size(nr_of_bits), rest :: size(nr_rest_bits)>>
-  end
-
-  @doc """
   This function adds a new node to our routing table.
   """
   def add_node(my_node_id, buckets, node) do
@@ -329,7 +291,7 @@ defmodule RoutingTable.Worker do
         ## If the bucket is full and the node would belong to a bucket that is far
         ## away from us, we will just drop that node. Go away you filthy node!
         Bucket.is_full?(bucket) and index != index_last_bucket(buckets) ->
-        Logger.error "Bucket #{index} is full -> drop #{Hexate.encode(elem(node, 0))}"
+        Logger.debug "Bucket #{index} is full -> drop #{Hexate.encode(elem(node, 0))}"
       buckets
 
       ## If the bucket is full but the node is closer to us, we will reorganize
@@ -337,29 +299,6 @@ defmodule RoutingTable.Worker do
       true ->
           buckets = reorganize(bucket.nodes, buckets ++ [Bucket.new(index + 1)], my_node_id)
           add_node(my_node_id, buckets, node)
-    end
-  end
-
-  @doc """
-  This function takes two node ids as binary and returns the bucket
-  number in which the node_id belongs as an integer. It counts the
-  number of identical bits.
-
-    ## Example
-
-        iex> RoutingTable.find_bucket(<<0b11110000>>, <<0b11111111>>)
-        4
-  """
-  def find_bucket(node_id_a, node_id_b), do: find_bucket(node_id_a, node_id_b, 0)
-  def find_bucket("", "", bucket), do: bucket
-  def find_bucket(node_id_a, node_id_b, bucket) do
-    << bit_a :: 1, rest_a :: bitstring >> = node_id_a
-    << bit_b :: 1, rest_b :: bitstring >> = node_id_b
-
-    if bit_a == bit_b do
-      find_bucket(rest_a, rest_b, (bucket + 1))
-    else
-      bucket
     end
   end
 
@@ -419,7 +358,7 @@ defmodule RoutingTable.Worker do
       remote_node_id: #{String.length(remote_node_id)}"
       raise ArgumentError, message: "Different length of self_node_id and remote_node_id"
     end
-    bucket_index = find_bucket(self_node_id, remote_node_id)
+    bucket_index = Distance.find_bucket(self_node_id, remote_node_id)
 
     min(bucket_index, index_last_bucket(buckets))
   end
