@@ -94,6 +94,15 @@ defmodule DHTServer.Worker do
   def handle_message({:error, error}, _socket, ip, port, state) do
     payload = KRPCProtocol.encode(:error, code: error.code, msg: error.msg, tid: error.tid)
     :gen_udp.send(state[:socket], ip, port, payload)
+
+    {:noreply, state}
+  end
+
+  def handle_message({:ignore, msg}, _socket, _ip, _port, state) do
+    Logger.error "Ignore unknown or corrupted message: #{inspect msg}"
+    ## Maybe we should blacklist this filthy peer?
+
+    {:noreply, state}
   end
 
 

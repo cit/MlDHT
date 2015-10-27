@@ -55,17 +55,25 @@ defmodule KRPCProtocol.Decoder.Test do
   #############
 
   test "Find Node" do
+    ## valid find_node
     result = {:find_node, %{node_id: "AAA", target: "BBB", tid: "aa"}}
     bin = "d1:ad2:id3:AAA6:target3:BBBe1:q9:find_node1:t2:aa1:y1:qe"
-
     assert KRPCProtocol.decode(bin) == result
+
+    ## find_node without target
+    bin = "d1:ad2:id3:AAAe1:q9:find_node1:t2:aa1:y1:qe"
+    assert {:error, _} = KRPCProtocol.decode(bin)
   end
 
   test "Get_Peers request" do
+    ## valid get_peers
     result = {:get_peers, %{node_id: "AAA", info_hash: "BBB", tid: "aa"}}
     bin = "d1:ad2:id3:AAA9:info_hash3:BBBe1:q9:get_peers1:t2:aa1:y1:qe"
-
     assert KRPCProtocol.decode(bin) == result
+
+    ## get_peers without infohash
+    bin = "d1:ad2:id3:AAAe1:q9:get_peers1:t2:aa1:y1:qe"
+    assert {:error, _} = KRPCProtocol.decode(bin)
   end
 
 

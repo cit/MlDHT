@@ -2,7 +2,11 @@ defmodule KRPCProtocol.Decoder do
   require Logger
 
   def decode(payload) when is_binary(payload) do
+    try do
     payload |> Bencodex.decode |> decode
+    catch
+      _, type -> {:ignore, payload}
+    end
   end
 
   #########
@@ -84,6 +88,12 @@ defmodule KRPCProtocol.Decoder do
   def decode(%{"y" => "r", "t" => tid, "r" => %{"id" => node_id}}) do
     {:ping_reply, %{node_id: node_id, tid: tid}}
   end
+
+  ## We ignore unknown messages
+  def decode(message) do
+    {:ignore, message}
+  end
+
 
 
   @doc """
