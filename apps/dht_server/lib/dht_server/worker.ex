@@ -49,7 +49,7 @@ defmodule DHTServer.Worker do
     cfg = Application.get_all_env(:dht_server)
 
     Enum.map(cfg[:bootstrap_nodes], fn(node) ->
-      {_, host, port} = node
+      {host, port} = node
 
       case :inet.getaddr(String.to_char_list(host), :inet) do
         {:ok, ip_addr} ->
