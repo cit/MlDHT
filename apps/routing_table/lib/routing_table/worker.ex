@@ -5,7 +5,6 @@ defmodule RoutingTable.Worker do
   require Bitwise
 
   alias RoutingTable.Node
-  alias RoutingTable.Timer
   alias RoutingTable.Bucket
   alias RoutingTable.Distance
 
@@ -78,15 +77,15 @@ defmodule RoutingTable.Worker do
 
   def init([node_id]) do
     ## Start timer for peer review
-    Timer.start_link(self, :review, @review_time * 1000)
+    Process.send_after(self(), :review, @review_time * 1000)
 
     ## Start timer for neighbourhood maintenance
-    Timer.start_link(self, :neighbourhood_maintenance,
-                     @neighbourhood_maintenance_time * 1000)
+    Process.send_after(self(), :neighbourhood_maintenance,
+                       @neighbourhood_maintenance_time * 1000)
 
     ## Start timer for bucket maintenance
-    Timer.start_link(self, :bucket_maintenance,
-                     @bucket_maintenance_time * 1000)
+    Process.send_after(self(), :bucket_maintenance, @bucket_maintenance_time *
+                       1000)
 
     {:ok, %{node_id: node_id, buckets: [Bucket.new(0)]}}
   end
@@ -118,7 +117,7 @@ defmodule RoutingTable.Worker do
     end)
 
     ## Restart the Timer
-    Timer.start_link(self, :review, @review_time * 1000)
+    Process.send_after(self(), :review, @review_time * 1000)
 
     {:noreply, [node_id: state[:node_id], buckets: new_buckets]}
   end
@@ -138,8 +137,8 @@ defmodule RoutingTable.Worker do
     end
 
     ## Restart the Timer
-    Timer.start_link(self, :neighbourhood_maintenance,
-                     @neighbourhood_maintenance_time * 1000)
+    Process.send_after(self(), :neighbourhood_maintenance,
+                       @neighbourhood_maintenance_time * 1000)
 
     {:noreply, state}
   end
@@ -168,7 +167,8 @@ defmodule RoutingTable.Worker do
       end
     end)
 
-    Timer.start_link(self, :bucket_maintenance, @bucket_maintenance_time * 1000)
+    Process.send_after(self(), :bucket_maintenance, @bucket_maintenance_time *
+                       1000)
 
     {:noreply, state}
   end
