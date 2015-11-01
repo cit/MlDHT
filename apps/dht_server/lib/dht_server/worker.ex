@@ -53,8 +53,8 @@ defmodule DHTServer.Worker do
 
       case :inet.getaddr(String.to_char_list(host), :inet) do
         {:ok, ip_addr} ->
-           payload = KRPCProtocol.encode(:ping, node_id: state[:node_id])
-           :gen_udp.send(state[:socket], ip_addr, port, payload)
+          payload = KRPCProtocol.encode(:ping, node_id: state[:node_id])
+          :gen_udp.send(state[:socket], ip_addr, port, payload)
         {:error, _code} -> Logger.error "Couldn't resolve the hostname #{host}"
       end
     end)
@@ -67,12 +67,9 @@ defmodule DHTServer.Worker do
     infohash = "3f19b149f53a50e14fc0b79926a391896eabab6f" |> Hexate.decode
     nodes = RoutingTable.closest_nodes(infohash)
 
-    Logger.debug "#{inspect nodes}"
+    Search.start_link(state[:node_id], infohash, nodes, state[:socket])
 
-    pid = Search.start_link(state[:node_id], infohash, nodes, state[:socket])
-    Search.start(pid)
-
-    {:noreply, %{state | queries: state.queries ++ [pid]}}
+    {:noreply, state}
   end
 
 
@@ -111,7 +108,7 @@ defmodule DHTServer.Worker do
   ########################
 
   def handle_message({:ping, remote}, socket, ip, port, state) do
-    debug_reply(remote.node_id, ">> ping")
+    Logger.debug "[#{Hexate.encode(remote.node_id)}] >> ping"
 
     if node_pid = RoutingTable.get(remote.node_id, {ip, port}, socket) do
       Node.send_ping_reply(node_pid, remote.tid)
@@ -153,8 +150,8 @@ defmodule DHTServer.Worker do
     Logger.debug "[#{Hexate.encode(remote.node_id)}] >> find_node_reply"
 
     ## If this belongs to an active search, it is actuall a get_peers_reply
-    ## without a token. Does anyone read the fucking specification?
-    if Enum.any?(state.queries, fn(pid) -> Search.tid(pid) == remote.tid end) do
+    ## without a token.
+    if Search.is_active?(remote.tid) do
       handle_message({:get_peer_reply, remote}, socket, ip, port, state)
     end
 
@@ -175,25 +172,16 @@ defmodule DHTServer.Worker do
   def handle_message({:get_peer_reply, remote}, _socket, _ip, _port, state) do
     Logger.debug "[#{Hexate.encode(remote.node_id)}] >> get_peer_reply"
 
-    new_queries = Enum.filter(state.queries, fn(pid) ->
-      if Search.tid(pid) == remote.tid do
+    if remote.values do
+      Logger.info "Found value: #{inspect remote.values}"
+    end
 
-        if remote.values do
-          Logger.info "Found value: #{inspect remote.values}"
-        end
+    pname = Search.tid_to_process_name(remote.tid)
+    if Search.is_active?(remote.tid) do
+      Search.handle_reply(pname, remote, remote.nodes)
+    end
 
-        if Search.completed?(pid) do
-          Logger.debug "SEARCH COMPLETE!!!1!"
-          Search.stop(pid)
-          false
-        else
-          Search.reply(pid, remote, remote.nodes)
-          true
-        end
-      end
-    end)
-
-    {:noreply, %{state | queries: new_queries}}
+    {:noreply, state}
   end
 
   def handle_message({:ping_reply, remote}, socket, ip, port, state) do
@@ -224,12 +212,7 @@ defmodule DHTServer.Worker do
         Node.send_find_node(pid, target)
       end
 
-      end)
-  end
-
-
-  def debug_reply(node_id, msg) do
-    Logger.debug "[#{String.slice(Hexate.encode(node_id), 0, 5)}] #{msg}"
+    end)
   end
 
 end
