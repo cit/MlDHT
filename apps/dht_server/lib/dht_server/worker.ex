@@ -48,16 +48,15 @@ defmodule DHTServer.Worker do
   def handle_cast(:bootstrap, state) do
     cfg = Application.get_all_env(:dht_server)
 
-    Enum.map(cfg[:bootstrap_nodes], fn(node) ->
-      {host, port} = node
-
+    nodes = Enum.map(cfg[:bootstrap_nodes], fn(node) ->
+      {id, host, port} = node
       case :inet.getaddr(String.to_char_list(host), :inet) do
-        {:ok, ip_addr} ->
-          payload = KRPCProtocol.encode(:ping, node_id: state[:node_id])
-          :gen_udp.send(state[:socket], ip_addr, port, payload)
+        {:ok, ip_addr}  -> {id, ip_addr, port}
         {:error, _code} -> Logger.error "Couldn't resolve the hostname #{host}"
       end
     end)
+
+    Search.start_link(:find_node, state[:node_id], state[:node_id], nodes, state[:socket])
 
     {:noreply, state}
   end
@@ -67,7 +66,16 @@ defmodule DHTServer.Worker do
     infohash = "3f19b149f53a50e14fc0b79926a391896eabab6f" |> Hexate.decode
     nodes = RoutingTable.closest_nodes(infohash)
 
-    Search.start_link(state[:node_id], infohash, nodes, state[:socket])
+    Search.start_link(:get_peers, state[:node_id], infohash, nodes, state[:socket])
+
+    {:noreply, state}
+  end
+
+
+  def handle_cast(:search2, state) do
+    nodes = RoutingTable.closest_nodes(state[:node_id])
+
+    Search.start_link(:find_node, state[:node_id], state[:node_id], nodes, state[:socket])
 
     {:noreply, state}
   end
@@ -149,10 +157,15 @@ defmodule DHTServer.Worker do
   def handle_message({:find_node_reply, remote}, socket, ip, port, state) do
     Logger.debug "[#{Hexate.encode(remote.node_id)}] >> find_node_reply"
 
-    ## If this belongs to an active search, it is actuall a get_peers_reply
-    ## without a token.
+    pname = Search.tid_to_process_name(remote.tid)
     if Search.is_active?(remote.tid) do
-      handle_message({:get_peer_reply, remote}, socket, ip, port, state)
+      ## If this belongs to an active search, it is actuall a get_peers_reply
+      ## without a token.
+      if Search.type(pname) == :get_peers do
+        handle_message({:get_peer_reply, remote}, socket, ip, port, state)
+      else
+        Search.handle_reply(pname, remote, remote.nodes)
+      end
     end
 
     if node_pid = RoutingTable.get(remote.node_id, {ip, port}, socket) do
@@ -189,13 +202,6 @@ defmodule DHTServer.Worker do
 
     if node_pid = RoutingTable.get(remote.node_id, {ip, port}, socket) do
       Node.response_received(node_pid)
-
-      ## If we have less than 10 nodes in our routing table lets ask node for
-      ## some close nodes
-      if RoutingTable.size < 10 do
-        find_node(state[:node_id])
-        Node.send_find_node(node_pid, state[:node_id])
-      end
     end
 
     {:noreply, state}
@@ -205,14 +211,5 @@ defmodule DHTServer.Worker do
   # Private Functions #
   #####################
 
-  def find_node(target) do
-    Enum.map(RoutingTable.closest_nodes(target), fn(pid) ->
-      queried = Node.last_time_queried(pid)
-      if (:os.system_time(:seconds) - queried) > 60 do
-        Node.send_find_node(pid, target)
-      end
-
-    end)
-  end
 
 end

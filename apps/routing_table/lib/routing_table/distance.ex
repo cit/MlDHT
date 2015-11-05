@@ -5,10 +5,14 @@ defmodule RoutingTable.Distance do
   TODO
   """
   def closest_nodes(nodes, target, n) do
+    closest_nodes(nodes, target)
+    |> Enum.slice(0..n)
+  end
+
+  def closest_nodes(nodes, target) do
     Enum.sort(nodes, fn(x, y) ->
       xor_cmp(x.id, y.id, target, &(&1 < &2))
     end)
-    |> Enum.slice(0..n)
   end
 
   @doc """
@@ -36,7 +40,6 @@ defmodule RoutingTable.Distance do
       func.(xor_a, xor_b)
     end
   end
-
 
   @doc """
   This function takes two node ids as binary and returns the bucket
