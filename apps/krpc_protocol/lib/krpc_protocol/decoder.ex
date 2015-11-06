@@ -5,7 +5,7 @@ defmodule KRPCProtocol.Decoder do
     try do
     payload |> Bencodex.decode |> decode
     catch
-      _, type -> {:ignore, payload}
+      _, type -> {:ignore, "Invalid bencoded message: #{payload}"}
     end
   end
 
@@ -62,6 +62,21 @@ defmodule KRPCProtocol.Decoder do
   def decode(%{"q" => "announce_peer", "t" => tid, "y" => "q", "a" => %{"id" => node_id,
              "info_hash" => infohash, "port" => _, "token" => token}}) do
     {:announce_peer, %{tid: tid, node_id: node_id, info_hash: infohash, token: token}}
+  end
+
+  def decode(%{"q" => "announce_peer", "t" => _, "y" => "q", "a" => %{"id" => _,
+             "port" => _, "token" => _}}) do
+    {:error, %{code: 203, msg: "Announce_peer with no info_hash."}}
+  end
+
+  def decode(%{"q" => "announce_peer", "t" => _, "y" => "q", "a" => %{"id" => _,
+             "token" => _, "info_hash" => _}}) do
+    {:error, %{code: 203, msg: "Announce_peer with no port."}}
+  end
+
+  def decode(%{"q" => "announce_peer", "t" => _, "y" => "q", "a" => %{"id" => _,
+             "port" => _, "info_hash" => _}}) do
+    {:error, %{code: 203, msg: "Announce_peer with no token."}}
   end
 
 
