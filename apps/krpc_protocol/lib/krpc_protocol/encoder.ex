@@ -73,18 +73,16 @@ defmodule KRPCProtocol.Encoder do
   end
 
   @doc ~S"""
-  This function returns a bencoded Mainline DHT get_peers query. It
-  needs a 20 bytes node id and a 20 bytes info_hash as an
-  argument. Optional arguments are [: "n6", scrape: true]
+  This function returns a bencoded Mainline DHT announce_peer query.
 
   ## Example
   iex> KRPCProtocol.encode(:announce_peer, node_id: node_id, info_hash: info_hash)
   """
   def encode(:announce_peer, args) do
     options = query_dict(args[:node_id], args[:info_hash])
-    |> Dict.put_new("implied_port", args[:implied_port])
-    |> Dict.put_new("port", args[:port])
-    |> Dict.put_new("token", args[:token])
+    |> add_option_if_defined(:implied_port, args[:implied_port])
+    |> add_option_if_defined(:port, args[:port])
+    |> add_option_if_defined(:token, args[:token])
 
     if args[:tid] do
       gen_dht_query("announce_peer", args[:tid], options)
@@ -154,7 +152,7 @@ defmodule KRPCProtocol.Encoder do
     :random.seed(:erlang.system_time(:milli_seconds))
 
     Stream.repeatedly(fn -> :rand.uniform 255 end)
-    |> Enum.take(2)
+    |> Enum.take(4)
     |> :binary.list_to_bin
   end
 

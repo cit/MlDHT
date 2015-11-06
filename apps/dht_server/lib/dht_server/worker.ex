@@ -23,7 +23,6 @@ defmodule DHTServer.Worker do
     GenServer.cast(@name, :search)
   end
 
-
   def init([]), do: init([port: 0])
 
   def init(port: port) do
@@ -67,15 +66,6 @@ defmodule DHTServer.Worker do
     nodes = RoutingTable.closest_nodes(infohash)
 
     Search.start_link(:get_peers, state[:node_id], infohash, nodes, state[:socket])
-
-    {:noreply, state}
-  end
-
-
-  def handle_cast(:search2, state) do
-    nodes = RoutingTable.closest_nodes(state[:node_id])
-
-    Search.start_link(:find_node, state[:node_id], state[:node_id], nodes, state[:socket])
 
     {:noreply, state}
   end

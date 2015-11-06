@@ -7,12 +7,12 @@ defmodule RoutingTable.Search do
   alias RoutingTable.Node
   alias RoutingTable.Search
 
-  def start_link(type, node_id, target, start_nodes, socket) do
+  def start_link(type, node_id, target, start_nodes, socket, port \\ 0) do
     tid  = KRPCProtocol.Encoder.gen_tid
     name = tid_to_process_name(tid)
+    args = [type, node_id, target, start_nodes, socket, tid, port]
 
-    GenServer.start_link(__MODULE__, [type, node_id, target,
-                                      start_nodes, socket, tid], name: name)
+    GenServer.start_link(__MODULE__, args, name: name)
     name
   end
 
@@ -28,7 +28,7 @@ defmodule RoutingTable.Search do
     GenServer.cast(pid, {:handle_reply, remote, nodes})
   end
 
-  def init([type, node_id, target, start_nodes, socket, tid]) do
+  def init([type, node_id, target, start_nodes, socket, tid, port]) do
     nodes = Enum.map(start_nodes, fn(node) ->
       {id, ip, port} = extract_node_infos(node)
       %Search.Node{id: id, ip: ip, port: port}
@@ -42,16 +42,33 @@ defmodule RoutingTable.Search do
       :target  => target,
       :nodes   => nodes,
       :tid     => tid,
-      :socket  => socket
+      :socket  => socket,
+      :port    => port
     }
 
     {:ok, state}
   end
 
-
   def handle_info(:search_iterate, state) do
     if Search.completed?(state.nodes, state.target) do
       Logger.debug "Search is complete"
+
+      ## If the search is complete and it was get_peers search, then we will
+      ## send the clostest peers an announce_peer message.
+      if state.type == :get_peers and state.port != 0 do
+        state.nodes
+        |> Distance.closest_nodes(state.target, 7)
+        |> Enum.filter(fn(node) -> node.responded == true end)
+        |> Enum.each(fn(node) ->
+          Logger.debug "[#{Hexate.encode node.id}] << announce_peer"
+
+          args = [node_id: state.node_id, info_hash: state.target,
+                  token: node.token, port: 6881]
+          payload = KRPCProtocol.encode(:announce_peer, args)
+          :gen_udp.send(state.socket, node.ip, node.port, payload)
+        end)
+      end
+
       {:stop, :normal, state}
     else
       ## Send queries to the 3 closest nodes
@@ -82,13 +99,23 @@ defmodule RoutingTable.Search do
   end
 
   def handle_cast({:handle_reply, remote, nil}, state) do
-    state = %{state | nodes: update_nodes(state.nodes, remote.node_id,:responded)}
+    old_nodes = update_nodes(state.nodes, remote.node_id, :responded)
+
+    if Map.has_key?(remote, :token) do
+      old_nodes = update_nodes(old_nodes, remote.node_id, :token, fn(_) -> remote.token end)
+    end
+
+    state = %{state | nodes: old_nodes}
     {:noreply, state}
   end
 
 
   def handle_cast({:handle_reply, remote, nodes}, state) do
     old_nodes = update_nodes(state.nodes, remote.node_id, :responded)
+
+    if Map.has_key?(remote, :token) do
+      old_nodes = update_nodes(old_nodes, remote.node_id, :token, fn(_) -> remote.token end)
+    end
 
     new_nodes = Enum.map(nodes, fn(node) ->
       {id, {ip, port}} = node
@@ -120,13 +147,13 @@ defmodule RoutingTable.Search do
   end
 
   defp gen_request_msg(:find_node, state) do
-    KRPCProtocol.encode(:find_node, tid: state.tid, node_id: state.node_id,
-                        target: state.target)
+    args = [tid: state.tid, node_id: state.node_id, target: state.target]
+    KRPCProtocol.encode(:find_node, args)
   end
 
   defp gen_request_msg(:get_peers, state) do
-    KRPCProtocol.encode(:get_peers, tid: state.tid, node_id: state.node_id,
-                        info_hash: state.target)
+    args = [tid: state.tid, node_id: state.node_id, info_hash: state.target]
+    KRPCProtocol.encode(:get_peers, args)
   end
 
 
@@ -166,8 +193,9 @@ defmodule RoutingTable.Search do
   end
 
   def tid_to_process_name(tid) do
-    <<oct1 :: size(8), oct2 :: size(8)>> = tid
-    String.to_atom("search#{oct1}#{oct2}")
+    <<oct1 :: size(8), oct2 :: size(8),
+      oct3 :: size(8), oct4 :: size(8)>> = tid
+    String.to_atom("search#{oct1}#{oct2}#{oct3}#{oct4}")
   end
 
 
