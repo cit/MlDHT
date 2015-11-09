@@ -35,10 +35,14 @@ defmodule DHTServer.Worker do
         Logger.debug "Node-ID: #{Hexate.encode node_id}"
         Logger.debug "UDP Port:#{port}"
 
+        ## Change secret of the token every 5 minutes
+        Process.send_after(self(), :change_secret, 60 * 1000 * 5)
+
         ## Setup RoutingTable
         RoutingTable.node_id(node_id)
 
-        {:ok, %{node_id: node_id, socket: socket, queries: []}}
+        {:ok, %{node_id: node_id, socket: socket, old_secret: nil,
+                secret: Utils.gen_secret, storage: %{}}}
       {:error, reason} ->
         {:stop, reason}
     end
@@ -55,7 +59,7 @@ defmodule DHTServer.Worker do
       end
     end)
 
-    Search.start_link(:find_node, state[:node_id], state[:node_id], nodes, state[:socket])
+    Search.start_link(:find_node, state.node_id, state.node_id, nodes, state.socket)
 
     {:noreply, state}
   end
@@ -65,9 +69,15 @@ defmodule DHTServer.Worker do
     infohash = "3f19b149f53a50e14fc0b79926a391896eabab6f" |> Hexate.decode
     nodes = RoutingTable.closest_nodes(infohash)
 
-    Search.start_link(:get_peers, state[:node_id], infohash, nodes, state[:socket])
+    Search.start_link(:get_peers, state.node_id, infohash, nodes, state.socket, 6881)
 
     {:noreply, state}
+  end
+
+
+  def handle_info(:change_secret, state) do
+    Logger.debug "Change Secret"
+    {:noreply, %{state | old_secret: state.secret, secret: Utils.gen_secret()}}
   end
 
 
@@ -87,8 +97,9 @@ defmodule DHTServer.Worker do
   #########
 
   def handle_message({:error, error}, _socket, ip, port, state) do
-    payload = KRPCProtocol.encode(:error, code: error.code, msg: error.msg, tid: error.tid)
-    :gen_udp.send(state[:socket], ip, port, payload)
+    args    = [code: error.code, msg: error.msg, tid: error.tid]
+    payload = KRPCProtocol.encode(:error, args)
+    :gen_udp.send(state.socket, ip, port, payload)
 
     {:noreply, state}
   end
@@ -107,32 +118,96 @@ defmodule DHTServer.Worker do
 
   def handle_message({:ping, remote}, socket, ip, port, state) do
     Logger.debug "[#{Hexate.encode(remote.node_id)}] >> ping"
+    query_received(remote.node_id, {ip, port}, socket)
 
-    if node_pid = RoutingTable.get(remote.node_id, {ip, port}, socket) do
-      Node.send_ping_reply(node_pid, remote.tid)
-    end
+    send_ping_reply(remote.node_id, remote.tid, ip, port, socket)
 
     {:noreply, state}
   end
 
   def handle_message({:find_node, remote}, socket, ip, port, state) do
     Logger.debug "[#{Hexate.encode(remote.node_id)}] >> find_node"
+    query_received(remote.node_id, {ip, port}, socket)
 
-    if node_pid = RoutingTable.get(remote.node_id, {ip, port}, socket) do
-      nodes = Enum.map(RoutingTable.closest_nodes(remote.target), fn(pid) ->
+    ## Get closest nodes for the requested target
+    nodes = Enum.map(RoutingTable.closest_nodes(remote.target), fn(pid) ->
+      Node.to_tuple(pid)
+    end)
+
+    Logger.debug("[#{Hexate.encode(remote.node_id)}] << find_node_reply")
+    args = [node_id: state.node_id, nodes: nodes, tid: remote.tid]
+    payload = KRPCProtocol.encode(:find_node_reply, args)
+    :gen_udp.send(state.socket, ip, port, payload)
+
+    {:noreply, state}
+  end
+
+  ## Get_peers
+
+  def handle_message({:get_peers, remote}, socket, ip, port, state) do
+    Logger.debug "[#{Hexate.encode(remote.node_id)}] >> get_peers"
+    query_received(remote.node_id, {ip, port}, socket)
+
+    ## Generate a token for the requesting node
+    token = :crypto.hash(:sha, Utils.tuple_to_ipstr(ip, port) <> state.secret)
+
+    if Map.has_key?(state.storage, remote.info_hash) do
+      values = Map.get(state.storage, remote.info_hash)
+
+      Logger.debug "Sending values: #{inspect values}"
+      Logger.debug("[#{Hexate.encode(remote.node_id)}] << get_peers_reply (values)")
+      args = [node_id: state.node_id, values: values, tid: remote.tid, token: token]
+    else
+      ## Get the closest nodes for the requested info_hash
+      nodes = Enum.map(RoutingTable.closest_nodes(remote.info_hash), fn(pid) ->
         Node.to_tuple(pid)
       end)
-      Node.send_find_node_reply(node_pid, remote.tid, nodes)
+
+      Logger.debug("[#{Hexate.encode(remote.node_id)}] << get_peers_reply (nodes)")
+      args = [node_id: state.node_id, nodes: nodes, tid: remote.tid, token: token]
     end
 
-    {:noreply, state}
-  end
-
-  def handle_message({:get_peers, remote}, _socket, _ip, _port, state) do
-    Logger.debug "[#{Hexate.encode(remote.node_id)}] >> get_peers (ignore)"
+    payload = KRPCProtocol.encode(:get_peers_reply, args)
+    :gen_udp.send(state.socket, ip, port, payload)
 
     {:noreply, state}
   end
+
+  ## Announce_peer
+
+  def handle_message({:announce_peer, remote}, socket, ip, port, state) do
+    Logger.debug "[#{Hexate.encode(remote.node_id)}] >> announce_peer"
+    query_received(remote.node_id, {ip, port}, socket)
+
+    if token_match(remote.token, ip, port, state.secret, state.old_secret) do
+      Logger.debug "Valid Token"
+      Logger.debug "#{inspect remote}"
+
+      if Map.has_key?(state.storage, remote.info_hash) do
+        storage = Map.update!(state.storage, remote.info_hash, fn(x) ->
+          x ++ [{ip, port}]
+        end)
+      else
+        storage = Map.put(state.storage, remote.info_hash, [{ip, port}])
+      end
+
+      Logger.debug "Storage: #{inspect storage}"
+
+      ## Sending a ping_reply back as an acknowledgement
+      send_ping_reply(remote.node_id, remote.tid, ip, port, socket)
+
+      {:noreply, %{state | storage: storage}}
+    else
+      Logger.debug("[#{Hexate.encode(remote.node_id)}] << error (invalid token})")
+
+      args = [code: 203, msg: "Announce_peer with wrong token", tid: remote.tid]
+      payload = KRPCProtocol.encode(:error, args)
+      :gen_udp.send(state.socket, ip, port, payload)
+
+      {:noreply, state}
+    end
+  end
+
 
   ########################
   # Incoming DHT Replies #
@@ -146,6 +221,7 @@ defmodule DHTServer.Worker do
 
   def handle_message({:find_node_reply, remote}, socket, ip, port, state) do
     Logger.debug "[#{Hexate.encode(remote.node_id)}] >> find_node_reply"
+    response_received(remote.node_id, {ip, port}, socket)
 
     pname = Search.tid_to_process_name(remote.tid)
     if Search.is_active?(remote.tid) do
@@ -158,22 +234,19 @@ defmodule DHTServer.Worker do
       end
     end
 
-    if node_pid = RoutingTable.get(remote.node_id, {ip, port}, socket) do
-      Node.response_received(node_pid)
-    end
-
     ## Ping all nodes
-    payload = KRPCProtocol.encode(:ping, node_id: state[:node_id])
+    payload = KRPCProtocol.encode(:ping, node_id: state.node_id)
     Enum.map(remote.nodes, fn(node) ->
       {_id, {ip, port}} = node
-      :gen_udp.send(state[:socket], ip, port, payload)
+      :gen_udp.send(state.socket, ip, port, payload)
     end)
 
     {:noreply, state}
   end
 
-  def handle_message({:get_peer_reply, remote}, _socket, _ip, _port, state) do
+  def handle_message({:get_peer_reply, remote}, socket, ip, port, state) do
     Logger.debug "[#{Hexate.encode(remote.node_id)}] >> get_peer_reply"
+    response_received(remote.node_id, {ip, port}, socket)
 
     if remote.values do
       Logger.info "Found value: #{inspect remote.values}"
@@ -189,10 +262,7 @@ defmodule DHTServer.Worker do
 
   def handle_message({:ping_reply, remote}, socket, ip, port, state) do
     Logger.debug "[#{Hexate.encode(remote.node_id)}] >> ping_reply"
-
-    if node_pid = RoutingTable.get(remote.node_id, {ip, port}, socket) do
-      Node.response_received(node_pid)
-    end
+    response_received(remote.node_id, {ip, port}, socket)
 
     {:noreply, state}
   end
@@ -200,6 +270,44 @@ defmodule DHTServer.Worker do
   #####################
   # Private Functions #
   #####################
+
+  def send_ping_reply(node_id, tid, ip, port, socket) do
+    Logger.debug("[#{Hexate.encode(node_id)}] << ping_reply")
+
+    payload = KRPCProtocol.encode(:ping_reply, tid: tid, node_id: node_id)
+    :gen_udp.send(socket, ip, port, payload)
+  end
+
+
+  defp query_received(node_id, ip_port, socket) do
+    if node_pid = RoutingTable.get(node_id, ip_port, socket) do
+      Node.update(node_pid, :last_query_rcv)
+    end
+  end
+
+  defp response_received(node_id, ip_port, socket) do
+    if node_pid = RoutingTable.get(node_id, ip_port, socket) do
+      Node.update(node_pid, :last_response_rcv)
+    end
+  end
+
+  defp token_match(tok, ip, port, secret, nil) do
+    new_str = Utils.tuple_to_ipstr(ip, port) <> secret
+    new_tok = :crypto.hash(:sha, new_str)
+
+    tok == new_tok
+  end
+
+  defp token_match(tok, ip, port, secret, old_secret) do
+    new_str = Utils.tuple_to_ipstr(ip, port) <> secret
+    old_str = Utils.tuple_to_ipstr(ip, port) <> old_secret
+
+    new_tok = :crypto.hash(:sha, new_str)
+    old_tok = :crypto.hash(:sha, old_str)
+
+    tok == new_tok or tok == old_tok
+  end
+
 
 
 end

@@ -103,6 +103,22 @@ defmodule KRPCProtocol.Encoder do
     gen_dht_response %{"id" => id, "nodes" => compact_format(nodes)}, tid
   end
 
+  def encode(:get_peers_reply, node_id: id, nodes: nodes, tid: tid, token: token) do
+    gen_dht_response %{
+      "id"    => id,
+      "token" => token,
+      "nodes" => compact_format(nodes)
+    }, tid
+  end
+
+  def encode(:get_peers_reply, node_id: id, values: values, tid: tid, token: token) do
+    gen_dht_response %{
+      "id"     => id,
+      "token"  => token,
+      "values" => compact_format_values(values)
+    }, tid
+  end
+
 
   @doc ~S"""
   This function returns a bencoded Mainline DHT get_peers query. It
@@ -121,6 +137,15 @@ defmodule KRPCProtocol.Encoder do
     end
   end
 
+  def compact_format_values(nodes), do: compact_format_values(nodes, "")
+  def compact_format_values([], result), do: result
+  def compact_format_values([head | tail], result) do
+    {ip, port} = head
+
+    result = result <> node_to_binary(ip, port)
+    compact_format_values(tail, result)
+  end
+
   def compact_format(nodes), do: compact_format(nodes, "")
   def compact_format([], result), do: result
   def compact_format([head | tail], result) do
@@ -128,6 +153,14 @@ defmodule KRPCProtocol.Encoder do
 
     result = result <> node_to_binary(node_id, ip, port)
     compact_format(tail, result)
+  end
+
+  def node_to_binary({oct1, oct2, oct3, oct4}, port) do
+    <<oct1    :: size(8),
+      oct2    :: size(8),
+      oct3    :: size(8),
+      oct4    :: size(8),
+      port    :: size(16)>>
   end
 
   def node_to_binary(node_id, {oct1, oct2, oct3, oct4}, port) do

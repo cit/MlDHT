@@ -102,7 +102,9 @@ defmodule RoutingTable.Search do
     old_nodes = update_nodes(state.nodes, remote.node_id, :responded)
 
     if Map.has_key?(remote, :token) do
-      old_nodes = update_nodes(old_nodes, remote.node_id, :token, fn(_) -> remote.token end)
+      old_nodes = update_nodes(old_nodes, remote.node_id, :token, fn(_) ->
+        remote.token
+      end)
     end
 
     state = %{state | nodes: old_nodes}
@@ -114,7 +116,9 @@ defmodule RoutingTable.Search do
     old_nodes = update_nodes(state.nodes, remote.node_id, :responded)
 
     if Map.has_key?(remote, :token) do
-      old_nodes = update_nodes(old_nodes, remote.node_id, :token, fn(_) -> remote.token end)
+      old_nodes = update_nodes(old_nodes, remote.node_id, :token, fn(_) ->
+        remote.token
+      end)
     end
 
     new_nodes = Enum.map(nodes, fn(node) ->

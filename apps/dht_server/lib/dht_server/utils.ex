@@ -41,4 +41,9 @@ defmodule DHTServer.Utils do
     |> :binary.list_to_bin
   end
 
+  @doc """
+  TODO
+  """
+  def gen_secret, do: gen_node_id()
+
 end
