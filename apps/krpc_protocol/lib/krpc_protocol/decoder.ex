@@ -17,6 +17,10 @@ defmodule KRPCProtocol.Decoder do
     {:error_reply, %{code: code, msg: msg, tid: tid}}
   end
 
+  def decode(%{"y" => "e", "e" => [code, msg]}) do
+    {:error_reply, %{code: code, msg: msg, tid: nil}}
+  end
+
   ###########
   # Queries #
   ###########
@@ -35,7 +39,8 @@ defmodule KRPCProtocol.Decoder do
 
   ## Find_node
 
-  def decode(%{"y" => "q", "t" => tid, "q" => "find_node", "a" => %{"id" => node_id, "target" => target}}) do
+  def decode(%{"y" => "q", "t" => tid, "q" => "find_node", "a" => %{"id" => node_id,
+               "target" => target}}) do
     {:find_node, %{node_id: node_id, target: target, tid: tid}}
   end
 

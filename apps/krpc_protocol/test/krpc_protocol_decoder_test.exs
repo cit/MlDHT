@@ -28,6 +28,9 @@ defmodule KRPCProtocol.Decoder.Test do
 
     result = {:error_reply, %{code: 201, msg: "A Generic Error Ocurred", tid: "aa"}}
     assert KRPCProtocol.decode("d1:eli201e23:A Generic Error Ocurrede1:t2:aa1:y1:ee") == result
+
+    result = {:error_reply, %{code: 203, msg: "a", tid: nil}}
+    assert KRPCProtocol.decode("d1:eli203e1:ae1:v2:UT1:y1:ee") == result
   end
 
   ########
