@@ -196,10 +196,13 @@ defmodule RoutingTable.Search do
     |> Process.whereis
   end
 
-  def tid_to_process_name(tid) do
-    <<oct1 :: size(8), oct2 :: size(8),
-      oct3 :: size(8), oct4 :: size(8)>> = tid
-    String.to_atom("search#{oct1}#{oct2}#{oct3}#{oct4}")
+  def tid_to_process_name(tid), do: tid_to_process_name(tid, "search")
+
+  def tid_to_process_name("", result), do: String.to_atom(result)
+
+  def tid_to_process_name(tid, result) do
+    <<oct :: size(8), rest :: binary>> = tid
+    tid_to_process_name(rest, result <> "#{oct}")
   end
 
 
