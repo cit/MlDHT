@@ -8,7 +8,8 @@ defmodule DHTServer do
 
     children = [
       # Define workers and child supervisors to be supervised
-      worker(DHTServer.Worker, [])
+      worker(DHTServer.Worker, []),
+      worker(DHTServer.Storage, [])
     ]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html

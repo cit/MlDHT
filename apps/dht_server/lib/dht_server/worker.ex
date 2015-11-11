@@ -4,6 +4,7 @@ defmodule DHTServer.Worker do
   require Logger
 
   alias DHTServer.Utils,     as: Utils
+  alias DHTServer.Storage,   as: Storage
 
   alias RoutingTable.Node,   as: Node
   alias RoutingTable.Search, as: Search
@@ -42,7 +43,7 @@ defmodule DHTServer.Worker do
         RoutingTable.node_id(node_id)
 
         {:ok, %{node_id: node_id, socket: socket, old_secret: nil,
-                secret: Utils.gen_secret, storage: %{}}}
+                secret: Utils.gen_secret}}
       {:error, reason} ->
         {:stop, reason}
     end
@@ -105,7 +106,7 @@ defmodule DHTServer.Worker do
   end
 
   def handle_message({:ignore, msg}, _socket, _ip, _port, state) do
-    Logger.error "Ignore unknown or corrupted message: #{inspect msg}"
+    Logger.error "Ignore unknown or corrupted message: #{inspect msg, limit: 5000}"
     ## Maybe we should blacklist this filthy peer?
 
     {:noreply, state}
@@ -151,8 +152,8 @@ defmodule DHTServer.Worker do
     ## Generate a token for the requesting node
     token = :crypto.hash(:sha, Utils.tuple_to_ipstr(ip, port) <> state.secret)
 
-    if Map.has_key?(state.storage, remote.info_hash) do
-      values = Map.get(state.storage, remote.info_hash)
+    if Storage.has_nodes_for_infohash?(remote.info_hash) do
+      values = Storage.get_nodes(remote.info_hash)
 
       Logger.debug "Sending values: #{inspect values}"
       Logger.debug("[#{Hexate.encode(remote.node_id)}] << get_peers_reply (values)")
@@ -183,20 +184,12 @@ defmodule DHTServer.Worker do
       Logger.debug "Valid Token"
       Logger.debug "#{inspect remote}"
 
-      if Map.has_key?(state.storage, remote.info_hash) do
-        storage = Map.update!(state.storage, remote.info_hash, fn(x) ->
-          x ++ [{ip, port}]
-        end)
-      else
-        storage = Map.put(state.storage, remote.info_hash, [{ip, port}])
-      end
-
-      Logger.debug "Storage: #{inspect storage}"
+      Storage.put(remote.info_hash, ip, port)
 
       ## Sending a ping_reply back as an acknowledgement
       send_ping_reply(remote.node_id, remote.tid, ip, port, socket)
 
-      {:noreply, %{state | storage: storage}}
+      {:noreply, state}
     else
       Logger.debug("[#{Hexate.encode(remote.node_id)}] << error (invalid token})")
 
@@ -299,13 +292,8 @@ defmodule DHTServer.Worker do
   end
 
   defp token_match(tok, ip, port, secret, old_secret) do
-    new_str = Utils.tuple_to_ipstr(ip, port) <> secret
-    old_str = Utils.tuple_to_ipstr(ip, port) <> old_secret
-
-    new_tok = :crypto.hash(:sha, new_str)
-    old_tok = :crypto.hash(:sha, old_str)
-
-    tok == new_tok or tok == old_tok
+    token_match(tok, ip, port, secret, nil) or
+    token_match(tok, ip, port, old_secret, nil)
   end
 
 
