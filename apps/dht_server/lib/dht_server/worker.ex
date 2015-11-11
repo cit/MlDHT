@@ -20,8 +20,12 @@ defmodule DHTServer.Worker do
     GenServer.cast(@name, :bootstrap)
   end
 
-  def search do
-    GenServer.cast(@name, :search)
+  def search(infohash, port, callback) do
+    GenServer.cast(@name, {:search, infohash, port, callback})
+  end
+
+  def search_example do
+    GenServer.cast(@name, :search_example)
   end
 
   def init([]), do: init([port: 0])
@@ -65,12 +69,24 @@ defmodule DHTServer.Worker do
     {:noreply, state}
   end
 
-  def handle_cast(:search, state) do
+  def handle_cast({:search, infohash, port, callback}, state) do
+    nodes = RoutingTable.closest_nodes(infohash)
+
+    Search.start_link(:get_peers, state.node_id, infohash, nodes, state.socket,
+                      port, callback)
+    {:noreply, state}
+  end
+
+
+  def handle_cast(:search_example, state) do
     ## Ubuntu 15.10 (64 bit)
     infohash = "3f19b149f53a50e14fc0b79926a391896eabab6f" |> Hexate.decode
     nodes = RoutingTable.closest_nodes(infohash)
 
-    Search.start_link(:get_peers, state.node_id, infohash, nodes, state.socket, 6881)
+    Search.start_link(:get_peers, state.node_id, infohash, nodes, state.socket, 6881,
+      fn(node) ->
+        IO.puts "#{inspect node}"
+      end)
 
     {:noreply, state}
   end
@@ -241,14 +257,17 @@ defmodule DHTServer.Worker do
     Logger.debug "[#{Hexate.encode(remote.node_id)}] >> get_peer_reply"
     response_received(remote.node_id, {ip, port}, socket)
 
-    if remote.values do
-      Logger.info "Found value: #{inspect remote.values}"
-    end
-
     pname = Search.tid_to_process_name(remote.tid)
     if Search.is_active?(remote.tid) do
       Search.handle_reply(pname, remote, remote.nodes)
+
+      if remote.values do
+        callback = Search.callback(pname)
+        Enum.each(remote.values, callback)
+        # Logger.info "Found value: #{inspect remote.values}"
+      end
     end
+
 
     {:noreply, state}
   end

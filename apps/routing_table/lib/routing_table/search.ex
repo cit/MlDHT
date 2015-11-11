@@ -7,28 +7,33 @@ defmodule RoutingTable.Search do
   alias RoutingTable.Node
   alias RoutingTable.Search
 
-  def start_link(type, node_id, target, start_nodes, socket, port \\ 0) do
+  def start_link(type, node_id, target, start_nodes, socket, port \\ 0,
+                 callback \\ nil) do
     tid  = KRPCProtocol.Encoder.gen_tid
     name = tid_to_process_name(tid)
-    args = [type, node_id, target, start_nodes, socket, tid, port]
+    args = [type, node_id, target, start_nodes, socket, tid, port, callback]
 
     GenServer.start_link(__MODULE__, args, name: name)
     name
   end
 
-  def stop(node_id) do
-    GenServer.call(node_id, :stop)
+  def stop(pid) do
+    GenServer.call(pid, :stop)
   end
 
   def type(node_id) do
     GenServer.call(node_id, :type)
   end
 
+  def callback(pid) do
+    GenServer.call(pid, :callback)
+  end
+
   def handle_reply(pid, remote, nodes) do
     GenServer.cast(pid, {:handle_reply, remote, nodes})
   end
 
-  def init([type, node_id, target, start_nodes, socket, tid, port]) do
+  def init([type, node_id, target, start_nodes, socket, tid, port, callback]) do
     nodes = Enum.map(start_nodes, fn(node) ->
       {id, ip, port} = extract_node_infos(node)
       %Search.Node{id: id, ip: ip, port: port}
@@ -37,13 +42,14 @@ defmodule RoutingTable.Search do
     Process.send_after(self(), :search_iterate, 500)
 
     state = %{
-      :type    => type,
-      :node_id => node_id,
-      :target  => target,
-      :nodes   => nodes,
-      :tid     => tid,
-      :socket  => socket,
-      :port    => port
+      :type     => type,
+      :node_id  => node_id,
+      :target   => target,
+      :nodes    => nodes,
+      :tid      => tid,
+      :socket   => socket,
+      :port     => port,
+      :callback => callback
     }
 
     {:ok, state}
@@ -96,6 +102,10 @@ defmodule RoutingTable.Search do
 
   def handle_call(:type, _from, state) do
     {:reply, state.type, state}
+  end
+
+  def handle_call(:callback, _from, state) do
+    {:reply, state.callback, state}
   end
 
   def handle_cast({:handle_reply, remote, nil}, state) do
