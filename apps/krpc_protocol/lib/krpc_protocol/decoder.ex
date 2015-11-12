@@ -3,11 +3,13 @@ defmodule KRPCProtocol.Decoder do
 
   def decode(payload) when is_binary(payload) do
     try do
-    payload |> Bencodex.decode |> decode
-    catch
-      _, type -> {:ignore, "Invalid bencoded message: #{payload}"}
+      payload |> Bencodex.decode |> check_errors |> decode
+    rescue
+      error in RuntimeError -> {:ignore, error.message}
+      error in _ -> {:ignore, "Invalid becoded payload: #{inspect payload}"}
     end
   end
+
 
   #########
   # Error #
@@ -20,6 +22,7 @@ defmodule KRPCProtocol.Decoder do
   def decode(%{"y" => "e", "e" => [code, msg]}) do
     {:error_reply, %{code: code, msg: msg, tid: nil}}
   end
+
 
   ###########
   # Queries #
@@ -114,7 +117,14 @@ defmodule KRPCProtocol.Decoder do
     {:ignore, message}
   end
 
+  ## This function checks for common error.
+  defp check_errors(msg) do
+    if Map.has_key?(msg, "a") and byte_size(msg["a"]["id"]) != 20 do
+      raise "Invalid node id size: #{byte_size(msg["a"]["id"])}"
+    end
 
+    msg
+  end
 
   @doc """
   This function extracts the Ipv4 address from a 'get_peers' response
