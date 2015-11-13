@@ -8,5 +8,4 @@ defmodule RoutingTable.Search.Test do
     assert Search.tid_to_process_name(<<2, 255, 0, 42>>) == :search2255042
   end
 
-
 end

@@ -4,7 +4,6 @@ defmodule RoutingTable.Bucket.Test do
   require Logger
 
   alias RoutingTable.Bucket
-  alias RoutingTable.Node
 
   test "size function" do
     bucket = Bucket.new(0)

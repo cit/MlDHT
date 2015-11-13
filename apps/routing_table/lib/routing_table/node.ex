@@ -1,6 +1,5 @@
 defmodule RoutingTable.Node do
   use GenServer
-
   require Logger
 
   def start_link(own_node_id, node_tuple) do
@@ -33,14 +32,6 @@ defmodule RoutingTable.Node do
 
   def is_questionable?(pid) do
     GenServer.call(pid, :is_questionable?)
-  end
-
-  def response_received(node_id) do
-    GenServer.call(node_id, :response_received)
-  end
-
-  def query_received(node_id) do
-    GenServer.call(node_id, :query_received)
   end
 
   def send_find_node(node_id, target) do
