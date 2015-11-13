@@ -62,14 +62,15 @@ defmodule KRPCProtocol.Decoder do
   ## Announce_peer
 
   def decode(%{"q" => "announce_peer", "t" => tid, "y" => "q", "a" => %{"id" => node_id,
-             "info_hash" => infohash, "port" => _, "token" => token,
+             "info_hash" => infohash, "port" => port, "token" => token,
              "implied_port" => implied_port}}) do
-    {:announce_peer, %{tid: tid, node_id: node_id, info_hash: infohash, token: token, implied_port: implied_port}}
+    {:announce_peer, %{tid: tid, node_id: node_id, info_hash: infohash, port: port,
+                       token: token, implied_port: implied_port}}
   end
 
   def decode(%{"q" => "announce_peer", "t" => tid, "y" => "q", "a" => %{"id" => node_id,
-             "info_hash" => infohash, "port" => _, "token" => token}}) do
-    {:announce_peer, %{tid: tid, node_id: node_id, info_hash: infohash, token: token}}
+             "info_hash" => infohash, "port" => port, "token" => token}}) do
+    {:announce_peer, %{tid: tid, node_id: node_id, info_hash: infohash, port: port, token: token}}
   end
 
   def decode(%{"q" => "announce_peer", "t" => _, "y" => "q", "a" => %{"id" => _,

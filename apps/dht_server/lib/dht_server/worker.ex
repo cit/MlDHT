@@ -200,6 +200,8 @@ defmodule DHTServer.Worker do
       Logger.debug "Valid Token"
       Logger.debug "#{inspect remote}"
 
+      port = if Map.has_key?(remote, :implied_port) do port else remote.port end
+
       Storage.put(remote.info_hash, ip, port)
 
       ## Sending a ping_reply back as an acknowledgement
