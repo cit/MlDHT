@@ -1,5 +1,5 @@
 defmodule RoutingTable.Search.Node do
-	defstruct id: nil, ip: nil, port: nil, token: nil, requested: 0,
+defstruct id: nil, ip: nil, port: nil, token: nil, requested: 0,
             request_sent: 0, responded: false
 
   def last_time_requested(node) do

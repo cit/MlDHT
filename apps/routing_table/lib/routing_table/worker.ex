@@ -238,7 +238,7 @@ defmodule RoutingTable.Worker do
   sucessful, it returns the node pid and if not it will return nil.
   """
   def handle_call({:add, node_id, address, socket}, _from, state) do
-    unless node_exists?(state[:buckets], node_id) do
+    if not node_exists?(state[:buckets], node_id) do
       node_tuple = {node_id, address, socket}
 
       {:reply, :ok, [node_id: state[:node_id],

@@ -56,8 +56,8 @@ defmodule DHTServer.Worker do
   def handle_cast(:bootstrap, state) do
     cfg = Application.get_all_env(:dht_server)
 
-    nodes = Enum.map(cfg[:bootstrap_nodes], fn(node) ->
-      {id, host, port} = node
+    nodes = Enum.map(cfg[:bootstrap_nodes], fn(node_tuple) ->
+      {id, host, port} = node_tuple
       case :inet.getaddr(String.to_char_list(host), :inet) do
         {:ok, ip_addr}  -> {id, ip_addr, port}
         {:error, _code} -> Logger.error "Couldn't resolve the hostname #{host}"
@@ -84,8 +84,8 @@ defmodule DHTServer.Worker do
     nodes = RoutingTable.closest_nodes(infohash)
 
     Search.start_link(:get_peers, state.node_id, infohash, nodes, state.socket, 6881,
-      fn(node) ->
-        IO.puts "#{inspect node}"
+      fn(node_tuple) ->
+        IO.puts "#{inspect node_tuple}"
       end)
 
     {:noreply, state}
@@ -247,8 +247,8 @@ defmodule DHTServer.Worker do
 
     ## Ping all nodes
     payload = KRPCProtocol.encode(:ping, node_id: state.node_id)
-    Enum.map(remote.nodes, fn(node) ->
-      {_id, {ip, port}} = node
+    Enum.map(remote.nodes, fn(node_tuple) ->
+      {_id, {ip, port}} = node_tuple
       :gen_udp.send(state.socket, ip, port, payload)
     end)
 
