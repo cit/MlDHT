@@ -38,10 +38,6 @@ defmodule RoutingTable.Node do
     GenServer.cast(node_id, {:send_find_node, target})
   end
 
-  def send_ping_reply(node_id, tid) do
-    GenServer.cast(node_id, {:send_ping_reply, tid})
-  end
-
   def send_ping(pid) do
     GenServer.cast(pid, :send_ping)
   end
@@ -187,16 +183,6 @@ defmodule RoutingTable.Node do
 
     payload = KRPCProtocol.encode(:get_peers_reply, node_id:
                                   state.own_node_id, nodes: nodes, tid: tid, token: token)
-    :gen_udp.send(state.socket, state.ip, state.port, payload)
-
-    {:noreply, state}
-  end
-
-  def handle_cast({:send_ping_reply, tid}, state) do
-    Logger.debug("[#{Hexate.encode(state.node_id)}] << ping_reply")
-
-    payload = KRPCProtocol.encode(:ping_reply, tid: tid, node_id:
-                                  state.own_node_id)
     :gen_udp.send(state.socket, state.ip, state.port, payload)
 
     {:noreply, state}
