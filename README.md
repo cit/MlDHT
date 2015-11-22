@@ -6,6 +6,10 @@ MLDHT is an [elixir](http://elixir-lang.org/) package that provides a mainline D
   * `KRPCProtocol` - contains modules to encode and decode KRPC messages;
   * `RoutingTable` - maintains contact information of close nodes;
 
+## Architecture
+
+![Diagram of the architecture of MLDHT](architecture/architecture.svg)
+
 ## Example
 
 The first thing we need to do, after the module is loaded, is to bootstrap. This process starts a `find_node` search for a node that belongs to the same bucket as our own node id. In `config.ex` you will find the boostrapping nodes that will be used for that first search. By doing this, we will quickly collect nodes that are close to us.
