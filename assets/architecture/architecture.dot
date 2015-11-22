@@ -1,0 +1,56 @@
+// Commandline to generate the architecture diagram:
+// dot architecture.dot -T svg -o architectur.svg
+
+digraph G {
+    rankdir  = BT;
+    splines  = ortho;
+    compound = true;
+    fontname = "Consolas";
+    node [shape=box, style="rounded, filled", fontname="Consolas"]
+
+    subgraph cluster1 {
+        labelloc = "b";
+        label = "DHTServer";
+
+        ds_sv      [label = "SuperVisor", fillcolor="#8ae234"]
+        ds_worker  [label = "Worker",     fillcolor="#729fcf"]
+        ds_storage [label = "Storage",    fillcolor="#729fcf"]
+        ds_utils   [label = "Utils",      fillcolor="#fcaf3e"]
+
+        ds_sv     -> ds_storage;
+        ds_sv     -> ds_worker;
+        ds_worker -> ds_utils;
+    }
+
+    subgraph cluster2 {
+        labelloc = "b";
+        label = "RoutingTable";
+
+        rt_sv       [label = "SuperVisor", fillcolor="#8ae234"]
+        rt_worker   [label = "Worker",     fillcolor="#729fcf"]
+        rt_bucket   [label = "Bucket",     fillcolor="#fcaf3e"]
+        rt_node     [label = "Node",       fillcolor="#729fcf"]
+        rt_distance [label = "Distance",   fillcolor="#fcaf3e"]
+        rt_search   [label = "Search",     fillcolor="#729fcf"]
+        rt_snode    [label = "Node",       fillcolor="#fcaf3e"]
+
+        rt_sv     -> rt_worker;
+        rt_worker -> rt_bucket;
+        rt_bucket -> rt_node;
+        rt_worker -> rt_distance;
+        rt_search -> rt_distance;
+        rt_search -> rt_snode;
+     }
+
+    subgraph cluster3 {
+         labelloc = "b";
+         label = "KRPCProtocol";
+
+         kp_decoder [label = "Decoder", fillcolor="#fcaf3e"]
+         kp_encoder [label = "Encoder", fillcolor="#fcaf3e"]
+    }
+
+    ds_worker -> rt_search  [ltail=cluster1,lhead=cluster2];
+    ds_worker -> kp_decoder [ltail=cluster1,lhead=cluster3];
+    rt_snode  -> kp_encoder [ltail=cluster2,lhead=cluster3];
+}
