@@ -8,7 +8,7 @@ MLDHT is an [elixir](http://elixir-lang.org/) package that provides a mainline D
 
 ## Architecture
 
-![Diagram of the architecture of MLDHT](assets/architecture/architecture.svg)
+![Diagram of the architecture of MLDHT](https://cdn.rawgit.com/cit/MLDHT/master/assets/architecture/architecture.svg)
 
 ## Example
 
