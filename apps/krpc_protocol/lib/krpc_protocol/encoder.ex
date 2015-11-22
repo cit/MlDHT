@@ -2,16 +2,8 @@ defmodule KRPCProtocol.Encoder do
 
   require Logger
 
-  defp gen_dht_query(command, options) when is_map(options) do
-    gen_dht_query(command, gen_tid(), options)
-  end
-
   defp gen_dht_query(command, tid, options) when is_map(options) do
     Bencodex.encode %{"y" => "q", "t" => tid, "q" => command, "a" => options}
-  end
-
-  defp gen_dht_response(options) when is_map(options) do
-    gen_dht_response options, gen_tid()
   end
 
   defp gen_dht_response(options, tid) when is_map(options) do
@@ -119,15 +111,9 @@ defmodule KRPCProtocol.Encoder do
     }, tid
   end
 
-
-  @doc ~S"""
-  This function returns a bencoded Mainline DHT get_peers query. It
-  needs a 20 bytes node id and a 20 bytes info_hash as an
-  argument. Optional arguments are [want: "n6", scrape: true]
-
-  ## Example
-  iex> KRPCProtocol.encode(:get_peers, node_id: node_id, info_hash: info_hash)
-  """
+  # This function returns a bencoded Mainline DHT get_peers query. It
+  # needs a 20 bytes node id and a 20 bytes info_hash as an
+  # argument. Optional arguments are [want: "n6", scrape: true]
   defp add_option_if_defined(dict, _key, nil), do: dict
   defp add_option_if_defined(dict, key, value) do
     if value == true do

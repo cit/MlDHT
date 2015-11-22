@@ -62,21 +62,6 @@ defmodule DHTServer.Worker do
     {:noreply, state}
   end
 
-  def bootstrap(state) do
-    cfg = Application.get_all_env(:dht_server)
-
-    nodes = Enum.map(cfg[:bootstrap_nodes], fn(node_tuple) ->
-      {id, host, port} = node_tuple
-      case :inet.getaddr(String.to_char_list(host), :inet) do
-        {:ok, ip_addr}  -> {id, ip_addr, port}
-        {:error, _code} -> Logger.error "Couldn't resolve the hostname #{host}"
-      end
-    end)
-
-    Search.start_link(:find_node, state.node_id, state.node_id, nodes, state.socket)
-  end
-
-
   def handle_cast({:search, infohash, port, callback}, state) do
     nodes = RoutingTable.closest_nodes(infohash)
 
@@ -289,6 +274,20 @@ defmodule DHTServer.Worker do
   #####################
   # Private Functions #
   #####################
+
+  def bootstrap(state) do
+    cfg = Application.get_all_env(:dht_server)
+
+    nodes = Enum.map(cfg[:bootstrap_nodes], fn(node_tuple) ->
+      {id, host, port} = node_tuple
+      case :inet.getaddr(String.to_char_list(host), :inet) do
+        {:ok, ip_addr}  -> {id, ip_addr, port}
+        {:error, _code} -> Logger.error "Couldn't resolve the hostname #{host}"
+      end
+    end)
+
+    Search.start_link(:find_node, state.node_id, state.node_id, nodes, state.socket)
+  end
 
   def send_ping_reply(node_id, tid, ip, port, socket) do
     Logger.debug("[#{Hexate.encode(node_id)}] << ping_reply")
