@@ -16,10 +16,31 @@ defmodule DHTServer.Worker do
     GenServer.start_link(__MODULE__, [], name: @name)
   end
 
+  @doc """
+  This function takes the bootstrapping nodes from the config and starts a
+  find_node search to our own node id. By doing this, we will quickly collect
+  nodes that are close to us and save it to our own routing table.
+
+  ## Example
+      iex> DHTServer.Worker.bootstrap
+  """
   def bootstrap do
     GenServer.cast(@name, :bootstrap)
   end
 
+  @doc ~S"""
+  This function needs a infohash as binary, a port as integer and a callback
+  function as parameter. It uses its own routing table as a starting point to
+  start a get_peers search for the infohash. After the search is finished, the
+  function automatically sends a announce_peer message to the clostest peers.
+
+  ## Example
+      iex> infohash = "3f19..." |> Hexate.decode
+      iex> DHTServer.Worker.search(infohash, 6881, fn(node) ->
+             {ip, port} = node
+             IO.puts "ip: #{ip} port: #{port}"
+           end)
+  """
   def search(infohash, port, callback) do
     GenServer.cast(@name, {:search, infohash, port, callback})
   end
