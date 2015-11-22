@@ -10,13 +10,27 @@ MLDHT is an [elixir](http://elixir-lang.org/) package that provides a mainline D
 
 ![Diagram of the architecture of MLDHT](https://cdn.rawgit.com/cit/MLDHT/master/assets/architecture/architecture.svg)
 
-## Example
+## Getting Started
 
-The first thing we need to do, after the module is loaded, is to bootstrap. This process starts a `find_node` search for a node that belongs to the same bucket as our own node id. In `config.ex` you will find the boostrapping nodes that will be used for that first search. By doing this, we will quickly collect nodes that are close to us.
+Learn how to add MLDHT to your Elixir project and start using it.
+
+### Adding MLDHT To Your Project
+
+To use MLDHT with your projects, edit your `mix.exs` file and add it as a dependency:
 
 ```elixir
-iex> DHTServer.Worker.bootstrap
+defp application do
+  [applications: [:dht_server]]
+end
+
+defp deps do
+  [{:mldht, path: "/path/to/mldht/"}]
+end
 ```
+
+### Basic Usage
+
+If the application is loaded it automatically bootstraps itself into the overlay network. It does this by starting a `find_node` search for a node that belongs to the same bucket as our own node id. In `mix.exs` you will find the boostrapping nodes that will be used for that first search. By doing this, we will quickly collect nodes that are close to us.
 
 If you are curious and would like to see the content of the `RoutingTable` you can use the following command:
 
@@ -30,10 +44,6 @@ To find nodes for a specific infohash, you can use the following function.
 iex> infohash = "3f19b149f53a50e14fc0b79926a391896eabab6f" |> Hexate.decode ## Ubuntu 15.04
 iex> DHTServer.Worker.search(infohash, 6881, fn(node) -> IO.puts "#{inspect node}" end)
 ```
-
-## Installation
-
-TODO
 
 ## License
 
