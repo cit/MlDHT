@@ -16,7 +16,14 @@ defmodule DHTServer.Mixfile do
   #
   # Type `mix help compile.app` for more information
   def application do
-    [applications: [:logger],
+    [applications: [:logger, :routing_table, :krpc_protocol],
+     env: [
+       bootstrap_nodes: [
+         {"32f54e697351ff4aec29cdbaabf2fbe3467cc267", "router.bittorrent.com",  6881},
+         {"ebff36697351ff4aec29cdbaabf2fbe3467cc267", "router.utorrent.com",    6881},
+         {"9f08e1074f1679137561bafe2cf62a73a8afadc7", "dht.transmissionbt.com", 6881},
+       ]
+     ],
      mod: {DHTServer, []}]
   end
 

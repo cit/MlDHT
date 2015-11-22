@@ -46,14 +46,23 @@ defmodule DHTServer.Worker do
         ## Setup RoutingTable
         RoutingTable.node_id(node_id)
 
-        {:ok, %{node_id: node_id, socket: socket, old_secret: nil,
-                secret: Utils.gen_secret}}
+        state = %{node_id: node_id, socket: socket, old_secret: nil,
+                  secret: Utils.gen_secret}
+
+        bootstrap(state)
+
+        {:ok, state}
       {:error, reason} ->
         {:stop, reason}
     end
   end
 
   def handle_cast(:bootstrap, state) do
+    bootstrap(state)
+    {:noreply, state}
+  end
+
+  def bootstrap(state) do
     cfg = Application.get_all_env(:dht_server)
 
     nodes = Enum.map(cfg[:bootstrap_nodes], fn(node_tuple) ->
@@ -65,9 +74,8 @@ defmodule DHTServer.Worker do
     end)
 
     Search.start_link(:find_node, state.node_id, state.node_id, nodes, state.socket)
-
-    {:noreply, state}
   end
+
 
   def handle_cast({:search, infohash, port, callback}, state) do
     nodes = RoutingTable.closest_nodes(infohash)
@@ -170,9 +178,6 @@ defmodule DHTServer.Worker do
 
     if Storage.has_nodes_for_infohash?(remote.info_hash) do
       values = Storage.get_nodes(remote.info_hash)
-
-      Logger.debug "Sending values: #{inspect values}"
-      Logger.debug("[#{Hexate.encode(remote.node_id)}] << get_peers_reply (values)")
       args = [node_id: state.node_id, values: values, tid: remote.tid, token: token]
     else
       ## Get the closest nodes for the requested info_hash
@@ -316,7 +321,5 @@ defmodule DHTServer.Worker do
     token_match(tok, ip, port, secret, nil) or
     token_match(tok, ip, port, old_secret, nil)
   end
-
-
 
 end
