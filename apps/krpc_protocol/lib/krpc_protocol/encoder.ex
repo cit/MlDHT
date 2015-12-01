@@ -117,9 +117,9 @@ defmodule KRPCProtocol.Encoder do
   defp add_option_if_defined(dict, _key, nil), do: dict
   defp add_option_if_defined(dict, key, value) do
     if value == true do
-      Dict.put_new(dict, to_string(key), 1)
+      Map.put_new(dict, to_string(key), 1)
     else
-      Dict.put_new(dict, to_string(key), value)
+      Map.put_new(dict, to_string(key), value)
     end
   end
 
