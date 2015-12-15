@@ -1,5 +1,5 @@
 # MLDHT - Mainline Distributed Hash Table
-[![Build Status](https://travis-ci.org/cit/MLDHT.svg)](https://travis-ci.org/cit/MLDHT.svg)
+[![Build Status](https://travis-ci.org/cit/MLDHT.svg)](https://travis-ci.org/cit/MLDHT)
 
 A Distributed Hash Table (DHT) is a storage and lookup system that is based on a peer-to-peer (P2P) system. The file sharing protocol BitTorrent makes use of a DHT to find new peers without using a central tracker. There are three popular DHT-based protocols: [KAD](https://en.wikipedia.org/wiki/Kad_network), [Vuze DHT](http://wiki.vuze.com/w/Distributed_hash_table) and Mainline DHT. All protocols are based on [Kademlia](https://en.wikipedia.org/wiki/Kademlia) but are not compatible with each other. The mainline DHT is by far the biggest overlay network with around 15-27 million users per day.
 
