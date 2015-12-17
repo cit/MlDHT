@@ -35,7 +35,7 @@ defmodule DHTServer.Worker do
   function automatically sends a announce_peer message to the clostest peers.
 
   ## Example
-      iex> infohash = "3f19..." |> Hexate.decode
+      iex> infohash = "3F19..." |> Base.decode16!
       iex> DHTServer.Worker.search(infohash, 6881, fn(node) ->
              {ip, port} = node
              IO.puts "ip: #{ip} port: #{port}"
@@ -58,7 +58,7 @@ defmodule DHTServer.Worker do
         {:ok, port} = :inet.port(socket)
 
         Logger.debug "Init DHT Node"
-        Logger.debug "Node-ID: #{Hexate.encode node_id}"
+        Logger.debug "Node-ID: #{Base.encode16 node_id}"
         Logger.debug "UDP Port:#{port}"
 
         ## Change secret of the token every 5 minutes
@@ -94,7 +94,7 @@ defmodule DHTServer.Worker do
 
   def handle_cast(:search_example, state) do
     ## Ubuntu 15.10 (64 bit)
-    infohash = "3f19b149f53a50e14fc0b79926a391896eabab6f" |> Hexate.decode
+    infohash = "3F19B149F53A50E14FC0B79926A391896EABAB6F" |> Base.decode16!
     nodes = RoutingTable.closest_nodes(infohash)
 
     Search.start_link(:get_peers, state.node_id, infohash, nodes, state.socket, 6881,
@@ -148,7 +148,7 @@ defmodule DHTServer.Worker do
   ########################
 
   def handle_message({:ping, remote}, socket, ip, port, state) do
-    Logger.debug "[#{Hexate.encode(remote.node_id)}] >> ping"
+    Logger.debug "[#{Base.encode16(remote.node_id)}] >> ping"
     query_received(remote.node_id, {ip, port}, socket)
 
     send_ping_reply(remote.node_id, remote.tid, ip, port, socket)
@@ -157,7 +157,7 @@ defmodule DHTServer.Worker do
   end
 
   def handle_message({:find_node, remote}, socket, ip, port, state) do
-    Logger.debug "[#{Hexate.encode(remote.node_id)}] >> find_node"
+    Logger.debug "[#{Base.encode16(remote.node_id)}] >> find_node"
     query_received(remote.node_id, {ip, port}, socket)
 
     ## Get closest nodes for the requested target
@@ -165,7 +165,7 @@ defmodule DHTServer.Worker do
       Node.to_tuple(pid)
     end)
 
-    Logger.debug("[#{Hexate.encode(remote.node_id)}] << find_node_reply")
+    Logger.debug("[#{Base.encode16(remote.node_id)}] << find_node_reply")
     args = [node_id: state.node_id, nodes: nodes, tid: remote.tid]
     payload = KRPCProtocol.encode(:find_node_reply, args)
     :gen_udp.send(state.socket, ip, port, payload)
@@ -176,7 +176,7 @@ defmodule DHTServer.Worker do
   ## Get_peers
 
   def handle_message({:get_peers, remote}, socket, ip, port, state) do
-    Logger.debug "[#{Hexate.encode(remote.node_id)}] >> get_peers"
+    Logger.debug "[#{Base.encode16(remote.node_id)}] >> get_peers"
     query_received(remote.node_id, {ip, port}, socket)
 
     ## Generate a token for the requesting node
@@ -191,7 +191,7 @@ defmodule DHTServer.Worker do
         Node.to_tuple(pid)
       end)
 
-      Logger.debug("[#{Hexate.encode(remote.node_id)}] << get_peers_reply (nodes)")
+      Logger.debug("[#{Base.encode16(remote.node_id)}] << get_peers_reply (nodes)")
       args = [node_id: state.node_id, nodes: nodes, tid: remote.tid, token: token]
     end
 
@@ -204,7 +204,7 @@ defmodule DHTServer.Worker do
   ## Announce_peer
 
   def handle_message({:announce_peer, remote}, socket, ip, port, state) do
-    Logger.debug "[#{Hexate.encode(remote.node_id)}] >> announce_peer"
+    Logger.debug "[#{Base.encode16(remote.node_id)}] >> announce_peer"
     query_received(remote.node_id, {ip, port}, socket)
 
     if token_match(remote.token, ip, port, state.secret, state.old_secret) do
@@ -220,7 +220,7 @@ defmodule DHTServer.Worker do
 
       {:noreply, state}
     else
-      Logger.debug("[#{Hexate.encode(remote.node_id)}] << error (invalid token})")
+      Logger.debug("[#{Base.encode16(remote.node_id)}] << error (invalid token})")
 
       args = [code: 203, msg: "Announce_peer with wrong token", tid: remote.tid]
       payload = KRPCProtocol.encode(:error, args)
@@ -242,7 +242,7 @@ defmodule DHTServer.Worker do
   end
 
   def handle_message({:find_node_reply, remote}, socket, ip, port, state) do
-    Logger.debug "[#{Hexate.encode(remote.node_id)}] >> find_node_reply"
+    Logger.debug "[#{Base.encode16(remote.node_id)}] >> find_node_reply"
     response_received(remote.node_id, {ip, port}, socket)
 
     pname = Search.tid_to_process_name(remote.tid)
@@ -267,7 +267,7 @@ defmodule DHTServer.Worker do
   end
 
   def handle_message({:get_peer_reply, remote}, socket, ip, port, state) do
-    Logger.debug "[#{Hexate.encode(remote.node_id)}] >> get_peer_reply"
+    Logger.debug "[#{Base.encode16(remote.node_id)}] >> get_peer_reply"
     response_received(remote.node_id, {ip, port}, socket)
 
     pname = Search.tid_to_process_name(remote.tid)
@@ -286,7 +286,7 @@ defmodule DHTServer.Worker do
   end
 
   def handle_message({:ping_reply, remote}, socket, ip, port, state) do
-    Logger.debug "[#{Hexate.encode(remote.node_id)}] >> ping_reply"
+    Logger.debug "[#{Base.encode16(remote.node_id)}] >> ping_reply"
     response_received(remote.node_id, {ip, port}, socket)
 
     {:noreply, state}
@@ -311,7 +311,7 @@ defmodule DHTServer.Worker do
   end
 
   def send_ping_reply(node_id, tid, ip, port, socket) do
-    Logger.debug("[#{Hexate.encode(node_id)}] << ping_reply")
+    Logger.debug("[#{Base.encode16(node_id)}] << ping_reply")
 
     payload = KRPCProtocol.encode(:ping_reply, tid: tid, node_id: node_id)
     :gen_udp.send(socket, ip, port, payload)

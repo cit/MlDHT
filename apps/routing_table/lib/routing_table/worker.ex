@@ -108,7 +108,7 @@ defmodule RoutingTable.Worker do
             Node.send_ping(pid)
 
           time >= @response_time and Node.is_questionable?(pid) ->
-            Logger.debug "[#{Hexate.encode Node.id(pid)}] Deleted"
+            Logger.debug "[#{Base.encode16 Node.id(pid)}] Deleted"
             Node.stop(pid)
             false
         end
@@ -291,7 +291,7 @@ defmodule RoutingTable.Worker do
         ## If the bucket is full and the node would belong to a bucket that is far
         ## away from us, we will just drop that node. Go away you filthy node!
         Bucket.is_full?(bucket) and index != index_last_bucket(buckets) ->
-        Logger.debug "Bucket #{index} is full -> drop #{Hexate.encode(elem(node, 0))}"
+        Logger.debug "Bucket #{index} is full -> drop #{Base.encode16(elem(node, 0))}"
       buckets
 
       ## If the bucket is full but the node is closer to us, we will reorganize

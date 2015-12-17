@@ -131,7 +131,7 @@ defmodule RoutingTable.Node do
   end
 
   def handle_call(:to_string, _from, state) do
-    node_id = Hexate.encode(state.node_id)
+    node_id = Base.encode16(state.node_id)
     str     = "#Node<id: #{node_id}, goodness: #{state.goodness}>"
 
     {:reply, str, state}
@@ -146,7 +146,7 @@ defmodule RoutingTable.Node do
   ###########
 
   def handle_cast(:send_ping, state) do
-    Logger.debug("[#{Hexate.encode(state.node_id)}] << ping")
+    Logger.debug("[#{Base.encode16(state.node_id)}] << ping")
 
     payload = KRPCProtocol.encode(:ping, node_id: state.own_node_id)
     :gen_udp.send(state.socket, state.ip, state.port, payload)
@@ -155,7 +155,7 @@ defmodule RoutingTable.Node do
   end
 
   def handle_cast({:send_find_node, target}, state) do
-    Logger.debug("[#{Hexate.encode(state.node_id)}] << find_node")
+    Logger.debug("[#{Base.encode16(state.node_id)}] << find_node")
 
     payload = KRPCProtocol.encode(:find_node, node_id: state.own_node_id,
                                   target: target)
@@ -169,7 +169,7 @@ defmodule RoutingTable.Node do
   ###########
 
   def handle_cast({:send_find_node_reply, tid, nodes}, state) do
-    Logger.debug("[#{Hexate.encode(state.node_id)}] << find_node_reply")
+    Logger.debug("[#{Base.encode16(state.node_id)}] << find_node_reply")
 
     payload = KRPCProtocol.encode(:find_node_reply, node_id:
                                   state.own_node_id, nodes: nodes, tid: tid)
@@ -179,7 +179,7 @@ defmodule RoutingTable.Node do
   end
 
   def handle_cast({:send_get_peers_reply, tid, nodes, token}, state) do
-    Logger.debug("[#{Hexate.encode(state.node_id)}] << get_peers_reply (#{inspect token})")
+    Logger.debug("[#{Base.encode16(state.node_id)}] << get_peers_reply (#{inspect token})")
 
     payload = KRPCProtocol.encode(:get_peers_reply, node_id:
                                   state.own_node_id, nodes: nodes, tid: tid, token: token)

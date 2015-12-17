@@ -19,9 +19,9 @@ defmodule DHTServer.Mixfile do
     [applications: [:logger, :routing_table, :krpc_protocol],
      env: [
        bootstrap_nodes: [
-         {"32f54e697351ff4aec29cdbaabf2fbe3467cc267", "router.bittorrent.com",  6881},
-         {"ebff36697351ff4aec29cdbaabf2fbe3467cc267", "router.utorrent.com",    6881},
-         {"9f08e1074f1679137561bafe2cf62a73a8afadc7", "dht.transmissionbt.com", 6881},
+         {"32F54E697351FF4AEC29CDBAABF2FBE3467CC267", "router.bittorrent.com",  6881},
+         {"EBFF36697351FF4AEC29CDBAABF2FBE3467CC267", "router.utorrent.com",    6881},
+         {"9F08E1074F1679137561BAFE2CF62A73A8AFADC7", "dht.transmissionbt.com", 6881},
        ]
      ],
      mod: {DHTServer, []}]

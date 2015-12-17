@@ -66,7 +66,7 @@ defmodule RoutingTable.Search do
         |> Distance.closest_nodes(state.target, 7)
         |> Enum.filter(fn(node) -> node.responded == true end)
         |> Enum.each(fn(node) ->
-          Logger.debug "[#{Hexate.encode node.id}] << announce_peer"
+          Logger.debug "[#{Base.encode16 node.id}] << announce_peer"
 
           args = [node_id: state.node_id, info_hash: state.target,
                   token: node.token, port: 6881]
@@ -148,7 +148,7 @@ defmodule RoutingTable.Search do
   def send_queries([], state), do: state
 
   def send_queries([node | rest], state) do
-    Logger.debug "[#{Hexate.encode(node.id)}] << #{state.type}"
+    Logger.debug "[#{Base.encode16(node.id)}] << #{state.type}"
 
     payload = gen_request_msg(state.type, state)
     :gen_udp.send(state.socket, node.ip, node.port, payload)

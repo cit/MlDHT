@@ -92,7 +92,7 @@ defmodule DHTServer.Storage do
 
   def handle_cast(:print, state) do
     Enum.each(Map.keys(state), fn(infohash) ->
-      Logger.debug "#{Hexate.encode infohash}"
+      Logger.debug "#{Base.encode16 infohash}"
       Enum.each(Map.get(state, infohash), fn(x) ->
         Logger.debug "  #{inspect x}"
       end)

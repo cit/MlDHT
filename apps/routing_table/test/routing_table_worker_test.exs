@@ -32,33 +32,33 @@ defmodule RoutingTable.Worker.Test do
 
   test "foo" do
     nodes = [
-      "32f54e697351ff4aec29cdbaabf2fbe3467cc267",
-      "93990a2be65c366458ef03acb48680ae83d2ad94",
-      "9399182c807ec599d5e980b2eac9cc53bf67d69d",
-      "93991b09293ce71a85b44d0578d576b9d09cc095",
-      "91478cdbd190e87d21c273f493957590a78d2b50",
-      "93991f40b451be18d727bfcae0ea1722fd65732a",
-      "9077c97800e42b0757e4f39ff8dd9e3e8ab67675",
-      "96cb5cea7c9fb775c1fb74de0121d7a11309ecc7",
-      "527429ee61360b9d6a69bcce493fb12250be7ece",
-      "a14e7753748539120787bce2b9815cc80af3174c",
-      "003e8f4139a0174fb0f1983b87d76dfacd29b783",
-      "93990647deb3124dc843bb8ba61f035a7d093806",
+      "32F54E697351FF4AEC29CDBAABF2FBE3467CC267",
+      "93990A2BE65C366458EF03ACB48680AE83D2AD94",
+      "9399182C807EC599D5E980B2EAC9CC53BF67D69D",
+      "93991B09293CE71A85B44D0578D576B9D09CC095",
+      "91478CDBD190E87D21C273F493957590A78D2B50",
+      "93991F40B451BE18D727BFCAE0EA1722FD65732A",
+      "9077C97800E42B0757E4F39FF8DD9E3E8AB67675",
+      "96CB5CEA7C9FB775C1FB74DE0121D7A11309ECC7",
+      "527429EE61360B9D6A69BCCE493FB12250BE7ECE",
+      "A14E7753748539120787BCE2B9815CC80AF3174C",
+      "003E8F4139A0174FB0F1983B87D76DFACD29B783",
+      "93990647DEB3124DC843BB8BA61F035A7D093806",
     ]
 
     ## set a real node id
-    Hexate.decode("fc8a15a2faf2734dbb1dc5f7afdc5c9beaeb1f59")
+    Base.decode16!("FC8A15A2FAF2734DBB1DC5F7AFDC5C9BEAEB1F59")
     |> RoutingTable.node_id
 
     ## add all nodes
     Enum.map(nodes, fn(x) ->
-      RoutingTable.add(Hexate.decode(x), {{127, 0, 0, 1}, 6881}, 23)
+      RoutingTable.add(Base.decode16!(x), {{127, 0, 0, 1}, 6881}, 23)
     end)
 
     RoutingTable.print()
-    RoutingTable.closest_nodes(Hexate.decode "dac8fac14c12bb46e25f15d810bbd14267ad4eca")
+    RoutingTable.closest_nodes(Base.decode16! "DAC8FAC14C12BB46E25F15D810BBD14267AD4ECA")
 
-    Enum.map(nodes, fn(x) -> RoutingTable.del(Hexate.decode(x)) end)
+    Enum.map(nodes, fn(x) -> RoutingTable.del(Base.decode16!(x)) end)
     # RoutingTable.print
 
     RoutingTable.node_id("AA")

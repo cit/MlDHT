@@ -36,7 +36,6 @@ defmodule RoutingTable.Mixfile do
   defp deps do
     [
       {:krpc_protocol, in_umbrella: true},
-      {:hexate,     "~> 0.5.1"},
     ]
   end
 end
