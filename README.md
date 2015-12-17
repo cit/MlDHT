@@ -44,7 +44,7 @@ iex> RoutingTable.Worker.print
 To find nodes for a specific infohash, you can use the following function.
 
 ```elixir
-iex> infohash = "3f19b149f53a50e14fc0b79926a391896eabab6f" |> Hexate.decode ## Ubuntu 15.04
+iex> infohash = "3F19B149F53A50E14FC0B79926A391896EABAB6F" |> Base.decode16! ## Ubuntu 15.04
 iex> DHTServer.Worker.search(infohash, 6881, fn(node) -> IO.puts "#{inspect node}" end)
 ```
 
