@@ -182,18 +182,19 @@ defmodule DHTServer.Worker do
     ## Generate a token for the requesting node
     token = :crypto.hash(:sha, Utils.tuple_to_ipstr(ip, port) <> state.secret)
 
-    if Storage.has_nodes_for_infohash?(remote.info_hash) do
-      values = Storage.get_nodes(remote.info_hash)
-      args = [node_id: state.node_id, values: values, tid: remote.tid, token: token]
-    else
-      ## Get the closest nodes for the requested info_hash
-      nodes = Enum.map(RoutingTable.closest_nodes(remote.info_hash), fn(pid) ->
-        Node.to_tuple(pid)
-      end)
+    args =
+      if Storage.has_nodes_for_infohash?(remote.info_hash) do
+        values = Storage.get_nodes(remote.info_hash)
+        [node_id: state.node_id, values: values, tid: remote.tid, token: token]
+      else
+        ## Get the closest nodes for the requested info_hash
+        nodes = Enum.map(RoutingTable.closest_nodes(remote.info_hash), fn(pid) ->
+          Node.to_tuple(pid)
+        end)
 
-      Logger.debug("[#{Base.encode16(remote.node_id)}] << get_peers_reply (nodes)")
-      args = [node_id: state.node_id, nodes: nodes, tid: remote.tid, token: token]
-    end
+        Logger.debug("[#{Base.encode16(remote.node_id)}] << get_peers_reply (nodes)")
+        [node_id: state.node_id, nodes: nodes, tid: remote.tid, token: token]
+      end
 
     payload = KRPCProtocol.encode(:get_peers_reply, args)
     :gen_udp.send(state.socket, ip, port, payload)

@@ -66,26 +66,27 @@ defmodule DHTServer.Storage do
   def handle_cast({:put, infohash, ip, port}, state) do
     item = {ip, port, :os.system_time(:seconds)}
 
-    if Map.has_key?(state, infohash) do
-      index = state
-      |> Map.get(infohash)
-      |> Enum.find_index(fn(node_tuple) ->
-        Tuple.delete_at(node_tuple,2) == {ip, port}
-      end)
-
-      if index do
-        new_state = Map.update!(state, infohash, fn(x) ->
-          List.replace_at(x, index, item)
+    new_state =
+      if Map.has_key?(state, infohash) do
+        index = state
+        |> Map.get(infohash)
+        |> Enum.find_index(fn(node_tuple) ->
+          Tuple.delete_at(node_tuple,2) == {ip, port}
         end)
+
+        if index do
+          Map.update!(state, infohash, fn(x) ->
+            List.replace_at(x, index, item)
+          end)
+        else
+          Map.update!(state, infohash, fn(x) ->
+	    x ++ [item]
+          end)
+        end
+
       else
-        new_state = Map.update!(state, infohash, fn(x) ->
-          x ++ [item]
-        end)
+        Map.put(state, infohash, [item])
       end
-
-    else
-      new_state = Map.put(state, infohash, [item])
-    end
 
     {:noreply, new_state}
   end
