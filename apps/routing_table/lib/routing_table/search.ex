@@ -69,7 +69,7 @@ defmodule RoutingTable.Search do
           Logger.debug "[#{Base.encode16 node.id}] << announce_peer"
 
           args = [node_id: state.node_id, info_hash: state.target,
-                  token: node.token, port: 6881]
+                  token: node.token, port: node.port]
           payload = KRPCProtocol.encode(:announce_peer, args)
           :gen_udp.send(state.socket, node.ip, node.port, payload)
         end)
