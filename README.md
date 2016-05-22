@@ -27,7 +27,7 @@ defp application do
 end
 
 defp deps do
-  [{:mldht, path: "/path/to/mldht/"}]
+  [{:mldht, github: "cit/MLDHT"}]
 end
 ```
 
@@ -45,7 +45,14 @@ To find nodes for a specific infohash, you can use the following function.
 
 ```elixir
 iex> infohash = "3F19B149F53A50E14FC0B79926A391896EABAB6F" |> Base.decode16! ## Ubuntu 15.04
-iex> DHTServer.Worker.search(infohash, 6881, fn(node) -> IO.puts "#{inspect node}" end)
+iex> DHTServer.search(infohash, fn(node) -> IO.puts "#{inspect node}" end)
+```
+
+If you would like to search and announce yourself to the DHT network use the following function:
+
+```elixir
+iex> infohash = "3F19B149F53A50E14FC0B79926A391896EABAB6F" |> Base.decode16! ## Ubuntu 15.04
+iex> DHTServer.search_announce(infohash, 6881, fn(node) -> IO.puts "#{inspect node}" end)
 ```
 
 ## License

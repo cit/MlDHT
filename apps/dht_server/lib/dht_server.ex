@@ -17,4 +17,7 @@ defmodule DHTServer do
     opts = [strategy: :one_for_one, name: DHTServer.Supervisor]
     Supervisor.start_link(children, opts)
   end
+
+  defdelegate search(infohash, callback),                to: DHTServer.Worker
+  defdelegate search_announce(infohash, port, callback), to: DHTServer.Worker
 end

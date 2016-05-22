@@ -16,6 +16,7 @@ defmodule DHTServer.Worker do
     GenServer.start_link(__MODULE__, [], name: @name)
   end
 
+
   @doc """
   This function takes the bootstrapping nodes from the config and starts a
   find_node search to our own node id. By doing this, we will quickly collect
@@ -28,21 +29,38 @@ defmodule DHTServer.Worker do
     GenServer.cast(@name, :bootstrap)
   end
 
+
   @doc ~S"""
-  This function needs a infohash as binary, a port as integer and a callback
-  function as parameter. It uses its own routing table as a starting point to
-  start a get_peers search for the infohash. After the search is finished, the
-  function automatically sends a announce_peer message to the clostest peers.
+  This function needs an infohash as binary, and a callback function as
+  parameter. This function uses its own routing table as a starting point to
+  start a get_peers search for the given infohash.
 
   ## Example
       iex> infohash = "3F19..." |> Base.decode16!
-      iex> DHTServer.Worker.search(infohash, 6881, fn(node) ->
+      iex> DHTServer.search(infohash, fn(node) ->
              {ip, port} = node
              IO.puts "ip: #{ip} port: #{port}"
            end)
   """
-  def search(infohash, port, callback) do
-    GenServer.cast(@name, {:search, infohash, port, callback})
+  def search(infohash, callback) do
+    GenServer.cast(@name, {:search, infohash, callback})
+  end
+
+
+  @doc ~S"""
+  This function needs an infohash as binary, a port as integer and a callback
+  function as parameter. This function does the same thing as the search/2
+  function, except it sends an announce message to the found peers.
+
+  ## Example
+      iex> infohash = "3F19..." |> Base.decode16!
+      iex> DHTServer.search_announce(infohash, 6881, fn(node) ->
+             {ip, port} = node
+             IO.puts "ip: #{ip} port: #{port}"
+           end)
+  """
+  def search_announce(infohash, port, callback) do
+    GenServer.cast(@name, {:search_announce, infohash, port, callback})
   end
 
   def search_example do
@@ -83,11 +101,19 @@ defmodule DHTServer.Worker do
     {:noreply, state}
   end
 
-  def handle_cast({:search, infohash, port, callback}, state) do
+  def handle_cast({:search_announce, infohash, port, callback}, state) do
     nodes = RoutingTable.closest_nodes(infohash)
 
     Search.start_link(:get_peers, state.node_id, infohash, nodes, state.socket,
                       port, callback)
+    {:noreply, state}
+  end
+
+  def handle_cast({:search, infohash, callback}, state) do
+    nodes = RoutingTable.closest_nodes(infohash)
+
+    Search.start_link(:get_peers, state.node_id, infohash, nodes, state.socket,
+                      0, callback)
     {:noreply, state}
   end
 
