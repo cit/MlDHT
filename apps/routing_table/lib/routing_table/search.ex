@@ -68,6 +68,7 @@ defmodule RoutingTable.Search do
         |> Enum.each(fn(node) ->
           Logger.debug "[#{Base.encode16 node.id}] << announce_peer"
 
+          ## Generate announce_peer message and sends it
           args = [node_id: state.node_id, info_hash: state.target,
                   token: node.token, port: node.port]
           payload = KRPCProtocol.encode(:announce_peer, args)
