@@ -301,9 +301,10 @@ defmodule DHTServer.Worker do
     if Search.is_active?(remote.tid) do
       Search.handle_reply(pname, remote, remote.nodes)
 
+      ## TODO: check if this is really necessary here (move to Search)
       if remote.values do
         callback = Search.callback(pname)
-        Enum.each(remote.values, callback)
+
         # Logger.info "Found value: #{inspect remote.values}"
       end
     end
