@@ -25,8 +25,7 @@ defmodule MlDHT.Mixfile do
 
   defp deps do
     [{:bencodex,      "~> 1.0.0"},
-     {:krpc_protocol, git: "/home/cit/Programmierung/Elixir/krpc_protocol", branch: "master"}
-     # {:krpc_protocol, "~> 0.0.1"},
+     {:krpc_protocol, "~> 0.0.2"}
     ]
   end
 
