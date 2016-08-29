@@ -325,10 +325,11 @@ defmodule DHTServer.Worker do
   #####################
 
   def bootstrap(state) do
-    cfg = Application.get_all_env(:dht_server)
+    cfg = Application.get_all_env(:mldht)
 
     nodes = Enum.map(cfg[:bootstrap_nodes], fn(node_tuple) ->
       {id, host, port} = node_tuple
+      Logger.debug "#{host}:#{port}"
       case :inet.getaddr(String.to_char_list(host), :inet) do
         {:ok, ip_addr}  -> {id, ip_addr, port}
         {:error, _code} -> Logger.error "Couldn't resolve the hostname #{host}"

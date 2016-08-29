@@ -1,4 +1,0 @@
-KrpcProtocol
-============
-
-** TODO: Add description **

@@ -9,7 +9,7 @@ defmodule RoutingTable.Search do
 
   def start_link(type, node_id, target, start_nodes, socket, port \\ 0,
                  callback \\ nil) do
-    tid  = KRPCProtocol.Encoder.gen_tid
+    tid  = KRPCProtocol.gen_tid
     name = tid_to_process_name(tid)
     args = [type, node_id, target, start_nodes, socket, tid, port, callback]
 

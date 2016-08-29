@@ -1,5 +1,7 @@
-defmodule DHTServer do
+defmodule MlDHT do
   use Application
+
+  require Logger
 
   # See http://elixir-lang.org/docs/stable/elixir/Application.html
   # for more information on OTP Applications
@@ -8,13 +10,14 @@ defmodule DHTServer do
 
     children = [
       # Define workers and child supervisors to be supervised
-      worker(DHTServer.Worker, []),
-      worker(DHTServer.Storage, [])
+      worker(RoutingTable.Worker, []),
+      worker(DHTServer.Worker,    []),
+      worker(DHTServer.Storage,   [])
     ]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
     # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: DHTServer.Supervisor]
+    opts = [strategy: :one_for_one, name: MlDHT.Supervisor]
     Supervisor.start_link(children, opts)
   end
 

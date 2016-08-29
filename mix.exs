@@ -1,10 +1,10 @@
-defmodule MldhtUmbrella.Mixfile do
+defmodule MlDHT.Mixfile do
   use Mix.Project
 
   def project do
     [app: :mldht,
      version: "0.1.0",
-     apps_path: "apps",
+     elixir: "~> 1.2",
      build_embedded:  Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      description: description,
@@ -12,8 +12,22 @@ defmodule MldhtUmbrella.Mixfile do
      deps: deps]
   end
 
+  def application do
+    [mod: {MlDHT, []},
+     env: [
+       bootstrap_nodes: [
+         {"32F54E697351FF4AEC29CDBAABF2FBE3467CC267", "router.bittorrent.com",  6881},
+         {"EBFF36697351FF4AEC29CDBAABF2FBE3467CC267", "router.utorrent.com",    6881},
+         {"9F08E1074F1679137561BAFE2CF62A73A8AFADC7", "dht.transmissionbt.com", 6881},
+       ]],
+     applications: [:logger]]
+  end
+
   defp deps do
-    []
+    [{:bencodex,      "~> 1.0.0"},
+     {:krpc_protocol, git: "/home/cit/Programmierung/Elixir/krpc_protocol", branch: "master"}
+     # {:krpc_protocol, "~> 0.0.1"},
+    ]
   end
 
   defp description do
