@@ -3,15 +3,10 @@
 
 A Distributed Hash Table (DHT) is a storage and lookup system that is based on a peer-to-peer (P2P) system. The file sharing protocol BitTorrent makes use of a DHT to find new peers without using a central tracker. There are three popular DHT-based protocols: [KAD](https://en.wikipedia.org/wiki/Kad_network), [Vuze DHT](http://wiki.vuze.com/w/Distributed_hash_table) and Mainline DHT. All protocols are based on [Kademlia](https://en.wikipedia.org/wiki/Kademlia) but are not compatible with each other. The mainline DHT is by far the biggest overlay network with around 15-27 million users per day.
 
-MLDHT, in particular, is an [elixir](http://elixir-lang.org/) package that provides a mainline DHT implementation according to [BEP 05](http://www.bittorrent.org/beps/bep_0005.html). It is build on three applications:
+MLDHT, in particular, is an [elixir](http://elixir-lang.org/) package that provides a mainline DHT implementation according to [BEP 05](http://www.bittorrent.org/beps/bep_0005.html). It is build on the following modules:
 
   * `DHTServer` - main interface, receives all incoming messages;
-  * `KRPCProtocol` - contains modules to encode and decode KRPC messages;
-  * `RoutingTable` - maintains contact information of close nodes;
-
-## Architecture
-
-![Diagram of the architecture of MLDHT](https://cdn.rawgit.com/cit/MLDHT/master/assets/architecture/architecture.svg)
+  * `RoutingTable` - maintains contact information of close nodes.
 
 ## Getting Started
 
@@ -45,14 +40,14 @@ To find nodes for a specific infohash, you can use the following function.
 
 ```elixir
 iex> infohash = "3F19B149F53A50E14FC0B79926A391896EABAB6F" |> Base.decode16! ## Ubuntu 15.04
-iex> DHTServer.search(infohash, fn(node) -> IO.puts "#{inspect node}" end)
+iex> MlDHT.search(infohash, fn(node) -> IO.puts "#{inspect node}" end)
 ```
 
 If you would like to search and announce yourself to the DHT network use the following function:
 
 ```elixir
 iex> infohash = "3F19B149F53A50E14FC0B79926A391896EABAB6F" |> Base.decode16! ## Ubuntu 15.04
-iex> DHTServer.search_announce(infohash, 6881, fn(node) -> IO.puts "#{inspect node}" end)
+iex> MlDHT.search_announce(infohash, 6881, fn(node) -> IO.puts "#{inspect node}" end)
 ```
 
 ## License
