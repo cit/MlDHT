@@ -324,22 +324,36 @@ defmodule DHTServer.Worker do
   # Private Functions #
   #####################
 
-  def bootstrap(state) do
-    cfg = Application.get_all_env(:mldht)
+  ## This function starts a search with the bootstrapping nodes.
+  defp bootstrap(state) do
+    nodes = Application.get_all_env(:mldht)
+    |> Keyword.get(:bootstrap_nodes)
+    |> resolve_hostnames
 
-    nodes = Enum.map(cfg[:bootstrap_nodes], fn(node_tuple) ->
-      {id, host, port} = node_tuple
-      Logger.debug "#{host}:#{port}"
-      case :inet.getaddr(String.to_char_list(host), :inet) do
-        {:ok, ip_addr}  -> {id, ip_addr, port}
-        {:error, _code} -> Logger.error "Couldn't resolve the hostname #{host}"
-      end
-    end)
-
+    Logger.debug "#{inspect nodes}"
     Search.start_link(:find_node, state.node_id, state.node_id, nodes, state.socket)
   end
 
-  def send_ping_reply(node_id, tid, ip, port, socket) do
+
+  ## This function iterates over a list of bootstrapping nodes and tries to
+  ## resolve the hostname of each node. If a node is not resolvable the function
+  ## removes it; if is resolvable it replaces the hostname with the IP address.
+  defp resolve_hostnames(list), do: resolve_hostnames(list, [])
+  defp resolve_hostnames([], result), do: result
+  defp resolve_hostnames([node_tuple | tail], result) do
+    {id, host, port} = node_tuple
+
+    Logger.debug "#{host}:#{port}"
+    case :inet.getaddr(String.to_char_list(host), :inet) do
+      {:ok, ip_addr}  ->
+        resolve_hostnames(tail, result ++ [{id, ip_addr, port}])
+      {:error, _code} ->
+        Logger.error "Couldn't resolve the hostname: #{host}"
+        resolve_hostnames(tail, result)
+    end
+  end
+
+  defp send_ping_reply(node_id, tid, ip, port, socket) do
     Logger.debug("[#{Base.encode16(node_id)}] << ping_reply")
 
     payload = KRPCProtocol.encode(:ping_reply, tid: tid, node_id: node_id)
