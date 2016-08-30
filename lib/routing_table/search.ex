@@ -8,7 +8,7 @@ defmodule RoutingTable.Search do
   alias RoutingTable.Search
 
   def start_link(type, node_id, target, start_nodes, socket, port \\ 0,
-                 callback \\ nil) do
+    callback \\ nil) do
     tid  = KRPCProtocol.gen_tid
     name = tid_to_process_name(tid)
     args = [type, node_id, target, start_nodes, socket, tid, port, callback]
@@ -110,13 +110,7 @@ defmodule RoutingTable.Search do
   end
 
   def handle_cast({:handle_reply, remote, nil}, state) do
-    old_nodes = update_nodes(state.nodes, remote.node_id, :responded)
-
-    if Map.has_key?(remote, :token) do
-      old_nodes = update_nodes(old_nodes, remote.node_id, :token, fn(_) ->
-        remote.token
-      end)
-    end
+    old_nodes = update_responded_node(state.nodes, remote)
 
     state = %{state | nodes: old_nodes}
     {:noreply, state}
@@ -124,13 +118,7 @@ defmodule RoutingTable.Search do
 
 
   def handle_cast({:handle_reply, remote, nodes}, state) do
-    old_nodes = update_nodes(state.nodes, remote.node_id, :responded)
-
-    if Map.has_key?(remote, :token) do
-      old_nodes = update_nodes(old_nodes, remote.node_id, :token, fn(_) ->
-        remote.token
-      end)
-    end
+    old_nodes = update_responded_node(state.nodes, remote)
 
     new_nodes = Enum.map(nodes, fn(node) ->
       {id, {ip, port}} = node
@@ -144,10 +132,10 @@ defmodule RoutingTable.Search do
   end
 
 
+
+
   def send_queries(state), do: send_queries(state.nodes, state)
-
   def send_queries([], state), do: state
-
   def send_queries([node | rest], state) do
     Logger.debug "[#{Base.encode16(node.id)}] << #{state.type}"
 
@@ -171,7 +159,21 @@ defmodule RoutingTable.Search do
     KRPCProtocol.encode(:get_peers, args)
   end
 
+  ## It is necessary that we need to know which node in our node list has
+  ## responded. This function goes through the node list and sets :responded of
+  ## the responded node to true. If the reply from the remote node also contains
+  ## a token this function updates this too.
+  defp update_responded_node(nodes, remote) do
+    node_list = update_nodes(nodes, remote.node_id, :responded)
 
+    if Map.has_key?(remote, :token) do
+      update_nodes(node_list, remote.node_id, :token, fn(_) -> remote.token end)
+    else
+      node_list
+    end
+  end
+
+  ## This function is a helper function to update the node list easily.
   def update_nodes(nodes, node_id, key) do
     update_nodes(nodes, node_id, key, fn(_) -> true end)
   end

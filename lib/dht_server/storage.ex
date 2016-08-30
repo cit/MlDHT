@@ -48,9 +48,9 @@ defmodule DHTServer.Storage do
 
 
   def handle_call({:has_nodes_for_infohash?, infohash}, _from, state) do
-    if result = Map.has_key?(state, infohash) do
-      result = Map.get(state, infohash) != []
-    end
+    has_keys = Map.has_key?(state, infohash)
+    result   = if has_keys, do: Map.get(state, infohash) != [], else: has_keys
+
     {:reply, result, state}
   end
 

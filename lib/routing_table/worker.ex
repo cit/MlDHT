@@ -310,7 +310,7 @@ defmodule RoutingTable.Worker do
     current_index  = length(buckets) - 2
     index          = find_bucket_index(buckets, my_node_id, Node.id(node))
 
-    if (current_index != index) do
+    new_buckets = if (current_index != index) do
       current_bucket = Enum.at(buckets, current_index)
       new_bucket     = Enum.at(buckets, index)
 
@@ -320,9 +320,11 @@ defmodule RoutingTable.Worker do
       ## Then add it to the new_bucket
       buckets = List.replace_at(buckets, current_index, filtered_bucket)
       |> List.replace_at(index, Bucket.add(new_bucket, node))
+    else
+      buckets
     end
 
-    reorganize(rest, buckets, my_node_id)
+    reorganize(rest, new_buckets, my_node_id)
   end
 
   @doc """
