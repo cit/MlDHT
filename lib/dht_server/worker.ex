@@ -161,7 +161,7 @@ defmodule DHTServer.Worker do
     {:noreply, state}
   end
 
-  def handle_message({:ignore, msg}, _socket, _ip, _port, state) do
+  def handle_message({:invalid, msg}, _socket, _ip, _port, state) do
     Logger.error "Ignore unknown or corrupted message: #{inspect msg, limit: 5000}"
     ## Maybe we should blacklist this filthy peer?
 
