@@ -300,15 +300,7 @@ defmodule DHTServer.Worker do
     pname = Search.tid_to_process_name(remote.tid)
     if Search.is_active?(remote.tid) do
       Search.handle_reply(pname, remote, remote.nodes)
-
-      ## TODO: check if this is really necessary here (move to Search)
-      if remote.values do
-        callback = Search.callback(pname)
-
-        # Logger.info "Found value: #{inspect remote.values}"
-      end
     end
-
 
     {:noreply, state}
   end

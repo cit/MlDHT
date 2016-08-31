@@ -25,10 +25,6 @@ defmodule RoutingTable.Search do
     GenServer.call(node_id, :type)
   end
 
-  def callback(pid) do
-    GenServer.call(pid, :callback)
-  end
-
   def handle_reply(pid, remote, nodes) do
     GenServer.cast(pid, {:handle_reply, remote, nodes})
   end
@@ -105,12 +101,12 @@ defmodule RoutingTable.Search do
     {:reply, state.type, state}
   end
 
-  def handle_call(:callback, _from, state) do
-    {:reply, state.callback, state}
-  end
-
   def handle_cast({:handle_reply, remote, nil}, state) do
     old_nodes = update_responded_node(state.nodes, remote)
+
+    ## If the reply contains values we need to inform the user of this
+    ## information and call the callback function.
+    if remote.values, do: Enum.each(remote.values, state.callback)
 
     state = %{state | nodes: old_nodes}
     {:noreply, state}
