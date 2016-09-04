@@ -1,4 +1,6 @@
 defmodule RoutingTable.Bucket do
+  @moduledoc false
+
   alias RoutingTable.Bucket
   alias RoutingTable.Node
 

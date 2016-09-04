@@ -1,4 +1,5 @@
 defmodule DHTServer.Utils do
+  @moduledoc false
 
   @doc ~S"""
   This function gets a tuple as IP address and a port and returns a

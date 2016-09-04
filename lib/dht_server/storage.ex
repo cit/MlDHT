@@ -1,4 +1,6 @@
 defmodule DHTServer.Storage do
+  @moduledoc false
+
   use GenServer
 
   require Logger

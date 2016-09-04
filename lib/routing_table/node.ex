@@ -1,5 +1,8 @@
 defmodule RoutingTable.Node do
+  @moduledoc false
+
   use GenServer
+
   require Logger
 
   def start_link(own_node_id, node_tuple) do

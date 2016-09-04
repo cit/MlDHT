@@ -1,4 +1,6 @@
 defmodule RoutingTable.Distance do
+  @moduledoc false
+
   require Bitwise
 
   @doc """
