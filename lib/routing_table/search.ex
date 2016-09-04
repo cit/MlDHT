@@ -1,4 +1,16 @@
 defmodule RoutingTable.Search do
+  @moduledoc false
+
+  @typedoc """
+  A transaction_id (tid) is a two bytes binary.
+  """
+  @type transaction_id :: <<_::16>>
+
+  @typedoc """
+  A DHT search is divided in a :get_peers or a :find_node search.
+  """
+  @type search_type :: :get_peers | :find_node
+
   use GenServer
 
   require Logger
