@@ -46,25 +46,12 @@ defmodule DHTServer.Worker do
     GenServer.cast(@name, {:search, infohash, callback})
   end
 
-
-  @doc ~S"""
-  This function needs an infohash as binary, a port as integer and a callback
-  function as parameter. This function does the same thing as the search/2
-  function, except it sends an announce message to the found peers.
-
-  ## Example
-      iex> infohash = "3F19..." |> Base.decode16!
-      iex> DHTServer.search_announce(infohash, 6881, fn(node) ->
-             {ip, port} = node
-             IO.puts "ip: #{ip} port: #{port}"
-           end)
-  """
-  def search_announce(infohash, port, callback) do
-    GenServer.cast(@name, {:search_announce, infohash, port, callback})
+  def search_announce(infohash, callback) do
+    GenServer.cast(@name, {:search_announce, infohash, callback})
   end
 
-  def search_example do
-    GenServer.cast(@name, :search_example)
+  def search_announce(infohash, port, callback) do
+    GenServer.cast(@name, {:search_announce, infohash, port, callback})
   end
 
   def init([]), do: init([port: 0])
@@ -101,32 +88,32 @@ defmodule DHTServer.Worker do
     {:noreply, state}
   end
 
-  def handle_cast({:search_announce, infohash, port, callback}, state) do
+  def handle_cast({:search_announce, infohash, callback}, state) do
     nodes = RoutingTable.closest_nodes(infohash)
 
-    Search.start_link(:get_peers, state.node_id, infohash, nodes, state.socket,
-                      port, callback)
+    Search.start_link(state.socket, state.node_id)
+    |> Search.get_peers(target: infohash, start_nodes: nodes,
+                        callback: callback, port: 0, announce: true)
+
+    {:noreply, state}
+  end
+
+  def handle_cast({:search_announce, infohash, callback, port}, state) do
+    nodes = RoutingTable.closest_nodes(infohash)
+
+    Search.start_link(state.socket, state.node_id)
+    |> Search.get_peers(target: infohash, start_nodes: nodes,
+                        callback: callback, port: port, announce: true)
+
     {:noreply, state}
   end
 
   def handle_cast({:search, infohash, callback}, state) do
     nodes = RoutingTable.closest_nodes(infohash)
 
-    Search.start_link(:get_peers, state.node_id, infohash, nodes, state.socket,
-                      0, callback)
-    {:noreply, state}
-  end
-
-
-  def handle_cast(:search_example, state) do
-    ## Ubuntu 15.10 (64 bit)
-    infohash = "3F19B149F53A50E14FC0B79926A391896EABAB6F" |> Base.decode16!
-    nodes = RoutingTable.closest_nodes(infohash)
-
-    Search.start_link(:get_peers, state.node_id, infohash, nodes, state.socket, 6881,
-      fn(node_tuple) ->
-        IO.puts "#{inspect node_tuple}"
-      end)
+    Search.start_link(state.socket, state.node_id)
+    |> Search.get_peers(target: infohash, start_nodes: nodes, port: 0,
+                        callback: callback, announce: false)
 
     {:noreply, state}
   end
@@ -274,7 +261,7 @@ defmodule DHTServer.Worker do
 
     pname = Search.tid_to_process_name(remote.tid)
     if Search.is_active?(remote.tid) do
-      ## If this belongs to an active search, it is actuall a get_peers_reply
+      ## If this belongs to an active search, it is actual a get_peers_reply
       ## without a token.
       if Search.type(pname) == :get_peers do
         handle_message({:get_peer_reply, remote}, socket, ip, port, state)
@@ -318,12 +305,15 @@ defmodule DHTServer.Worker do
 
   ## This function starts a search with the bootstrapping nodes.
   defp bootstrap(state) do
+
+    ## Get the nodes which are defined as bootstrapping nodes in the config
     nodes = Application.get_all_env(:mldht)
     |> Keyword.get(:bootstrap_nodes)
     |> resolve_hostnames
 
-    Logger.debug "#{inspect nodes}"
-    Search.start_link(:find_node, state.node_id, state.node_id, nodes, state.socket)
+    ## Start a find_node search to collect neighbors for our routing table
+    Search.start_link(state.socket, state.node_id)
+    |> Search.find_node(target: state.node_id, start_nodes: nodes)
   end
 
 

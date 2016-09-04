@@ -7,69 +7,78 @@ defmodule RoutingTable.Search do
   alias RoutingTable.Node
   alias RoutingTable.Search
 
-  def start_link(type, node_id, target, start_nodes, socket, port \\ 0,
-    callback \\ nil) do
+  ##############
+  # Client API #
+  ##############
+
+  def start_link(socket, node_id) do
     tid  = KRPCProtocol.gen_tid
     name = tid_to_process_name(tid)
-    args = [type, node_id, target, start_nodes, socket, tid, port, callback]
 
-    GenServer.start_link(__MODULE__, args, name: name)
+    GenServer.start_link(__MODULE__, [socket, node_id, tid], name: name)
     name
   end
 
-  def stop(pid) do
-    GenServer.call(pid, :stop)
-  end
+  def get_peers(pid, args), do: GenServer.cast(pid, {:get_peers, args})
 
-  def type(node_id) do
-    GenServer.call(node_id, :type)
-  end
+  def find_node(pid, args), do: GenServer.cast(pid, {:find_node, args})
+
+  def stop(pid), do: GenServer.call(pid, :stop)
+
+  def type(pid), do: GenServer.call(pid, :type)
 
   def handle_reply(pid, remote, nodes) do
     GenServer.cast(pid, {:handle_reply, remote, nodes})
   end
 
-  def init([type, node_id, target, start_nodes, socket, tid, port, callback]) do
-    nodes = Enum.map(start_nodes, fn(node) ->
-      {id, ip, port} = extract_node_infos(node)
-      %Search.Node{id: id, ip: ip, port: port}
-    end)
+  @doc """
+  Returns `true` if there is an active search process with a given `tid`.
+  Returns `false` if the `tid` is not registerted.
+  """
+  @spec is_active?(transaction_id | atom) :: boolean
+  def is_active?(tid) when is_binary(tid) do
+    active? = tid
+    |> tid_to_process_name
+    |> Process.whereis
 
-    Process.send_after(self(), :search_iterate, 500)
+    if active?, do: true, else: false
+  end
 
-    state = %{
-      :type     => type,
-      :node_id  => node_id,
-      :target   => target,
-      :nodes    => nodes,
-      :tid      => tid,
-      :socket   => socket,
-      :port     => port,
-      :callback => callback
-    }
+  def is_active?(tid) when is_atom(tid) do
+    if Process.whereis(tid), do: true, else: false
+  end
 
-    {:ok, state}
+  @doc """
+  Converts a `tid` to a process name.
+  """
+  @spec tid_to_process_name(transaction_id) :: atom
+
+  def tid_to_process_name(tid), do: tid_to_process_name(tid, "search")
+  def tid_to_process_name("", result) do
+    String.replace_trailing(result, "_", "")
+    |> String.to_atom
+  end
+  def tid_to_process_name(tid, result) do
+    <<oct :: size(8), rest :: binary>> = tid
+    tid_to_process_name(rest, result <> "#{oct}_")
+  end
+
+  ####################
+  # Server Callbacks #
+  ####################
+
+  def init([socket, node_id, tid]) do
+    {:ok, %{:socket => socket, :node_id => node_id, :tid => tid}}
   end
 
   def handle_info(:search_iterate, state) do
-    if Search.completed?(state.nodes, state.target) do
+    if search_completed?(state.nodes, state.target) do
       Logger.debug "Search is complete"
 
       ## If the search is complete and it was get_peers search, then we will
       ## send the clostest peers an announce_peer message.
-      if state.type == :get_peers and state.port != 0 do
-        state.nodes
-        |> Distance.closest_nodes(state.target, 7)
-        |> Enum.filter(fn(node) -> node.responded == true end)
-        |> Enum.each(fn(node) ->
-          Logger.debug "[#{Base.encode16 node.id}] << announce_peer"
-
-          ## Generate announce_peer message and sends it
-          args = [node_id: state.node_id, info_hash: state.target,
-                  token: node.token, port: node.port]
-          payload = KRPCProtocol.encode(:announce_peer, args)
-          :gen_udp.send(state.socket, node.ip, node.port, payload)
-        end)
+      if Map.has_key?(state, :announce) and state.announce == true do
+        send_announce_msg(state)
       end
 
       {:stop, :normal, state}
@@ -92,13 +101,24 @@ defmodule RoutingTable.Search do
     end
   end
 
-
   def handle_call(:stop, _from, state) do
     {:stop, :normal, :ok, state}
   end
 
   def handle_call(:type, _from, state) do
     {:reply, state.type, state}
+  end
+
+  def handle_cast({:get_peers, args}, state) do
+    new_state = start_search_closure(:get_peers, args, state).()
+
+    {:noreply, new_state}
+  end
+
+  def handle_cast({:find_node, args}, state) do
+    new_state = start_search_closure(:find_node, args, state).()
+
+    {:noreply, new_state}
   end
 
   def handle_cast({:handle_reply, remote, nil}, state) do
@@ -111,7 +131,6 @@ defmodule RoutingTable.Search do
     state = %{state | nodes: old_nodes}
     {:noreply, state}
   end
-
 
   def handle_cast({:handle_reply, remote, nodes}, state) do
     old_nodes = update_responded_node(state.nodes, remote)
@@ -127,12 +146,43 @@ defmodule RoutingTable.Search do
     {:noreply, %{state | nodes: old_nodes ++ new_nodes}}
   end
 
+  #####################
+  # Private Functions #
+  #####################
 
+  def send_announce_msg(state) do
+    state.nodes
+    |> Distance.closest_nodes(state.target, 7)
+    |> Enum.filter(fn(node) -> node.responded == true end)
+    |> Enum.each(fn(node) ->
+      Logger.debug "[#{Base.encode16 node.id}] << announce_peer"
 
+      args = [node_id: state.node_id, info_hash: state.target,
+              token: node.token, port: node.port]
+      args = if state.port == 0, do: args ++ [implied_port: true], else: args
 
-  def send_queries(state), do: send_queries(state.nodes, state)
-  def send_queries([], state), do: state
-  def send_queries([node | rest], state) do
+      payload = KRPCProtocol.encode(:announce_peer, args)
+      :gen_udp.send(state.socket, node.ip, node.port, payload)
+    end)
+  end
+
+  ## This function merges args (keyword list) with the state map and returns a
+  ## function depending on the type (:get_peers, :find_node).
+  defp start_search_closure(type, args, state) do
+    fn() ->
+      Process.send_after(self(), :search_iterate, 500)
+
+      ## Convert the keyword list to a map and merge it with state.
+      args
+      |> Enum.into(%{})
+      |> Map.merge(state)
+      |> Map.put(:type, type)
+      |> Map.put(:nodes, nodes_to_search_nodes(args[:start_nodes]))
+    end
+  end
+
+  defp send_queries([], state), do: state
+  defp send_queries([node | rest], state) do
     Logger.debug "[#{Base.encode16(node.id)}] << #{state.type}"
 
     payload = gen_request_msg(state.type, state)
@@ -143,6 +193,13 @@ defmodule RoutingTable.Search do
     |> update_nodes(node.id, :request_sent, fn(_) -> :os.system_time(:seconds) end)
 
     send_queries(rest, %{state | nodes: new_nodes})
+  end
+
+  defp nodes_to_search_nodes(nodes) do
+    Enum.map(nodes, fn(node) ->
+      {id, ip, port} = extract_node_infos(node)
+      %Search.Node{id: id, ip: ip, port: port}
+    end)
   end
 
   defp gen_request_msg(:find_node, state) do
@@ -170,11 +227,11 @@ defmodule RoutingTable.Search do
   end
 
   ## This function is a helper function to update the node list easily.
-  def update_nodes(nodes, node_id, key) do
+  defp update_nodes(nodes, node_id, key) do
     update_nodes(nodes, node_id, key, fn(_) -> true end)
   end
 
-  def update_nodes(nodes, node_id, key, func) do
+  defp update_nodes(nodes, node_id, key, func) do
     Enum.map(nodes, fn(node) ->
       if node.id == node_id do
         Map.put(node, key, func.(node))
@@ -184,35 +241,18 @@ defmodule RoutingTable.Search do
     end)
   end
 
-
-  def extract_node_infos(node) when is_tuple(node), do: node
-
-  def extract_node_infos(node) when is_pid(node) do
+  defp extract_node_infos(node) when is_tuple(node), do: node
+  defp extract_node_infos(node) when is_pid(node) do
     Node.to_tuple(node)
   end
 
-  def completed?(nodes, target) do
+  ## This function contains the condition when a search is completed.
+  defp search_completed?(nodes, target) do
     nodes
     |> Distance.closest_nodes(target, 7)
     |> Enum.all?(fn(node) ->
       node.responded == true or node.requested >= 3
     end)
   end
-
-  def is_active?(tid) do
-    tid
-    |> tid_to_process_name
-    |> Process.whereis
-  end
-
-  def tid_to_process_name(tid), do: tid_to_process_name(tid, "search")
-
-  def tid_to_process_name("", result), do: String.to_atom(result)
-
-  def tid_to_process_name(tid, result) do
-    <<oct :: size(8), rest :: binary>> = tid
-    tid_to_process_name(rest, result <> "#{oct}")
-  end
-
 
 end
