@@ -23,6 +23,7 @@ defmodule RoutingTable.Search do
   # Client API #
   ##############
 
+  # @spec start_link() :: atom
   def start_link(socket, node_id) do
     tid  = KRPCProtocol.gen_tid
     name = tid_to_process_name(tid)
@@ -35,13 +36,25 @@ defmodule RoutingTable.Search do
 
   def find_node(pid, args), do: GenServer.cast(pid, {:find_node, args})
 
+  @doc """
+  Stops a search process.
+  """
+  @spec stop(pid) :: :ok
   def stop(pid), do: GenServer.call(pid, :stop)
 
+
+  @doc """
+  Returns the type of the search process.
+  """
+  @spec type(pid) :: search_type
   def type(pid), do: GenServer.call(pid, :type)
 
+
+#  @spec handle_reply(pid, foo, list) :: :ok
   def handle_reply(pid, remote, nodes) do
     GenServer.cast(pid, {:handle_reply, remote, nodes})
   end
+
 
   @doc """
   Returns `true` if there is an active search process with a given `tid`.
