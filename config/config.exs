@@ -33,7 +33,7 @@ use Mix.Config
 
 # Sample configuration (overrides the imported configuration above):
 #
-config :logger, :console,
-  level: :debug
+# config :logger, :console,
+#   level: :debug
 #       format: "$date $time [$level] $metadata$message\n",
 #       metadata: [:user_id]
