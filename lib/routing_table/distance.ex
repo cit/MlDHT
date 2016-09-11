@@ -75,7 +75,7 @@ defmodule RoutingTable.Distance do
   def gen_node_id(nr_of_bits, node_id) do
     nr_rest_bits = 160 - nr_of_bits
     << bits :: size(nr_of_bits),   _ :: size(nr_rest_bits) >> = node_id
-    << rest :: size(nr_rest_bits), _ :: size(nr_of_bits)   >> = :crypto.rand_bytes(20)
+    << rest :: size(nr_rest_bits), _ :: size(nr_of_bits)   >> = :crypto.strong_rand_bytes(20)
 
     << bits :: size(nr_of_bits), rest :: size(nr_rest_bits)>>
   end

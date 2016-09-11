@@ -35,7 +35,7 @@ defmodule DHTServer.Utils do
   binary.
   """
   def gen_node_id do
-    :random.seed(:erlang.system_time(:milli_seconds))
+    :rand.seed(:exs64, :os.timestamp)
 
     Stream.repeatedly(fn -> :rand.uniform 255 end)
     |> Enum.take(20)
