@@ -56,9 +56,9 @@ defmodule DHTServer.Worker do
     GenServer.cast(@name, {:search_announce, infohash, port, callback})
   end
 
-  def init([]), do: init([port: 0])
+  def init([]) do
+    port = Application.get_env(:mldht, :port)
 
-  def init(port: port) do
     case :gen_udp.open port, [{:active, true}] do
       {:ok, socket} ->
         node_id = Utils.gen_node_id

@@ -15,6 +15,7 @@ defmodule MlDHT.Mixfile do
   def application do
     [mod: {MlDHT, []},
      env: [
+       port: 6881,
        bootstrap_nodes: [
          {"32F54E697351FF4AEC29CDBAABF2FBE3467CC267", "router.bittorrent.com",  6881},
          {"EBFF36697351FF4AEC29CDBAABF2FBE3467CC267", "router.utorrent.com",    6881},
