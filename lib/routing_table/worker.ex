@@ -320,7 +320,7 @@ defmodule RoutingTable.Worker do
       filtered_bucket = Bucket.del(current_bucket, Node.id(node))
 
       ## Then add it to the new_bucket
-      buckets = List.replace_at(buckets, current_index, filtered_bucket)
+      List.replace_at(buckets, current_index, filtered_bucket)
       |> List.replace_at(index, Bucket.add(new_bucket, node))
     else
       buckets
