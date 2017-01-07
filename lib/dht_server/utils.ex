@@ -3,7 +3,7 @@ defmodule DHTServer.Utils do
 
   @doc ~S"""
   This function gets a tuple as IP address and a port and returns a
-  string which contains the IPv4 address and port in the following
+  string which contains the IPv4 or IPv6 address and port in the following
   format: "127.0.0.1:6881".
 
     ## Example
@@ -12,6 +12,16 @@ defmodule DHTServer.Utils do
   """
   def tuple_to_ipstr({oct1, oct2, oct3, oct4}, port) do
     "#{oct1}.#{oct2}.#{oct3}.#{oct4}:#{port}"
+  end
+
+  def tuple_to_ipstr(ipv6_addr, port) when tuple_size(ipv6_addr) == 8 do
+    ip_str =
+      String.duplicate("~4.16.0B:", 8)
+      |> String.slice(0..-2) ## remove last ":" of the string
+      |> :io_lib.format(Tuple.to_list(ipv6_addr))
+      |> List.to_string
+
+    "[#{ip_str}]:#{port}"
   end
 
   @doc ~S"""
