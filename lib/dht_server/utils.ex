@@ -25,9 +25,7 @@ defmodule DHTServer.Utils do
   end
 
   @doc ~S"""
-  This function gets a tuple as IP address and a port and returns a
-  string which contains the IPv4 address and port in the following
-  format: "127.0.0.1:6881".
+  This function gets an IPv4 address as binary and converts it to a tuple.
 
     ## Example
     iex> DHTServer.Utils.ipstr_to_tuple("127.0.0.1")
