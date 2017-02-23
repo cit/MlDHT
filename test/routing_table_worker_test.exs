@@ -1,33 +1,35 @@
 defmodule RoutingTable.Worker.Test do
   use ExUnit.Case
-  require Logger
 
   alias RoutingTable.Worker, as: RoutingTable
 
+  @name :test
+
   setup do
-    RoutingTable.node_id("AA")
+    {:ok, _registry} = RoutingTable.start_link(:test)
+    RoutingTable.node_id(@name, "AA")
   end
 
   test "If the function node_id can set and get the node_id" do
-    RoutingTable.node_id("BB")
-    assert RoutingTable.node_id == "BB"
+    RoutingTable.node_id(@name, "BB")
+    assert RoutingTable.node_id(@name) == "BB"
   end
 
   test "If the size of the table is 0 if we add and delete a node" do
-    RoutingTable.add("BB", {{127, 0, 0, 1}, 6881}, 23)
-    assert RoutingTable.size == 1
+    RoutingTable.add(@name, "BB", {{127, 0, 0, 1}, 6881}, 23)
+    assert RoutingTable.size(@name) == 1
 
-    RoutingTable.del("BB")
-    assert RoutingTable.size == 0
+    RoutingTable.del(@name, "BB")
+    assert RoutingTable.size(@name) == 0
   end
 
   test "get_node" do
-    assert :ok == RoutingTable.add("BB", {{127, 0, 0, 1}, 6881}, 23)
+    assert :ok == RoutingTable.add(@name, "BB", {{127, 0, 0, 1}, 6881}, 23)
 
-    assert RoutingTable.get("BB") |> Kernel.is_pid == true
-    assert RoutingTable.get("CC") == nil
+    assert RoutingTable.get(@name, "BB") |> Kernel.is_pid == true
+    assert RoutingTable.get(@name, "CC") == nil
 
-    RoutingTable.del("BB")
+    RoutingTable.del(@name, "BB")
   end
 
   test "foo" do
@@ -47,35 +49,27 @@ defmodule RoutingTable.Worker.Test do
     ]
 
     ## set a real node id
-    Base.decode16!("FC8A15A2FAF2734DBB1DC5F7AFDC5C9BEAEB1F59")
-    |> RoutingTable.node_id
+    RoutingTable.node_id(@name, Base.decode16!("FC8A15A2FAF2734DBB1DC5F7AFDC5C9BEAEB1F59"))
 
     ## add all nodes
     Enum.map(nodes, fn(x) ->
-      RoutingTable.add(Base.decode16!(x), {{127, 0, 0, 1}, 6881}, 23)
+      RoutingTable.add(@name, Base.decode16!(x), {{127, 0, 0, 1}, 6881}, 23)
     end)
 
-    RoutingTable.print()
-    RoutingTable.closest_nodes(Base.decode16! "DAC8FAC14C12BB46E25F15D810BBD14267AD4ECA")
+    RoutingTable.print(@name)
+    RoutingTable.closest_nodes(@name, Base.decode16!("DAC8FAC14C12BB46E25F15D810BBD14267AD4ECA"))
 
-    Enum.map(nodes, fn(x) -> RoutingTable.del(Base.decode16!(x)) end)
+    Enum.map(nodes, fn(x) -> RoutingTable.del(@name, Base.decode16!(x)) end)
     # RoutingTable.print
-
-    RoutingTable.node_id("AA")
+    RoutingTable.node_id(@name, "AA")
   end
 
   test "Double entries" do
-    RoutingTable.add("BB", {{127, 0, 0, 1}, 6881}, 23)
-    RoutingTable.add("BB", {{127, 0, 0, 1}, 6881}, 23)
+    RoutingTable.add(@name, "BB", {{127, 0, 0, 1}, 6881}, 23)
+    RoutingTable.add(@name, "BB", {{127, 0, 0, 1}, 6881}, 23)
 
-    assert RoutingTable.size == 1
-    RoutingTable.del("BB")
+    assert RoutingTable.size(@name) == 1
+    RoutingTable.del(@name, "BB")
   end
-
-
-
-
-
-
 
 end

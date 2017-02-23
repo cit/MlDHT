@@ -14,9 +14,6 @@ defmodule RoutingTable.Worker do
   # Constants #
   #############
 
-  ## Module name
-  @name __MODULE__
-
   ## 5 Minutes
   @review_time 60 * 5
 
@@ -33,44 +30,45 @@ defmodule RoutingTable.Worker do
   # Public API #
   ##############
 
-  def start_link do
-    GenServer.start_link(__MODULE__, ["AAAAAAAAAAAAAAAAAAAA"], name: @name)
+  def start_link(name) do
+    Logger.debug "name: #{name}"
+    GenServer.start_link(__MODULE__, ["AAAAAAAAAAAAAAAAAAAA"], name: name)
   end
 
-  def add(remote_node_id, address, socket) do
-    GenServer.call(@name, {:add, remote_node_id, address, socket})
+  def add(name, remote_node_id, address, socket) do
+    GenServer.call(name, {:add, remote_node_id, address, socket})
   end
 
-  def node_id(node_id) do
-    GenServer.call(@name, {:node_id, node_id})
+  def node_id(name, node_id) do
+    GenServer.call(name, {:node_id, node_id})
   end
 
-  def node_id do
-    GenServer.call(@name, :node_id)
+  def node_id(name) do
+    GenServer.call(name, :node_id)
   end
 
-  def size do
-    GenServer.call(@name, :size)
+  def size(name) do
+    GenServer.call(name, :size)
   end
 
-  def print do
-    GenServer.cast(@name, :print)
+  def print(name) do
+    GenServer.cast(name, :print)
   end
 
-  def get(node_id) do
-    GenServer.call(@name, {:get, node_id})
+  def get(name, node_id) do
+    GenServer.call(name, {:get, node_id})
   end
 
-  def get(node_id, address, socket) do
-    GenServer.call(@name, {:get, node_id, address, socket})
+  def get(name, node_id, address, socket) do
+    GenServer.call(name, {:get, node_id, address, socket})
   end
 
-  def closest_nodes(target) do
-    GenServer.call(@name, {:closest_nodes, target})
+  def closest_nodes(name, target) do
+    GenServer.call(name, {:closest_nodes, target})
   end
 
-  def del(node_id) do
-    GenServer.call(@name, {:del, node_id})
+  def del(name, node_id) do
+    GenServer.call(name, {:del, node_id})
   end
 
   #################
