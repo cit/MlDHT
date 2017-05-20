@@ -1,4 +1,5 @@
 defmodule MlDHT do
+
   @moduledoc ~S"""
   MlDHT is an Elixir package that provides a Kademlia Distributed Hash Table
   (DHT) implementation according to [BitTorrent Enhancement Proposals (BEP)
@@ -21,20 +22,35 @@ defmodule MlDHT do
 
   use Application
 
+  import Supervisor.Spec, warn: false
+
+  defp routing_table_for(ip_version) do
+    if Application.get_env(:mldht, ip_version) do
+      worker(RoutingTable.Worker, [ip_version], [id: ip_version])
+    end
+  end
+
   @doc false
   def start(_type, _args) do
-    import Supervisor.Spec, warn: false
 
-    children = [
-      # Define workers and child supervisors to be supervised
-      worker(RoutingTable.Worker, []),
-      worker(DHTServer.Worker,    []),
-      worker(DHTServer.Storage,   [])
+    ## Define workers and child supervisors to be supervised
+
+    ## According to BEP 32 there are two distinct DHTs: the IPv4 DHT, and the
+    ## IPv6 DHT. This means we need two seperate routing tables for each IP
+    ## version.
+    children = [] ++ [routing_table_for(:ipv4)] ++ [routing_table_for(:ipv6)]
+
+    children = children ++ [
+      worker(DHTServer.Worker,  []),
+      worker(DHTServer.Storage, [])
     ]
+
+    children = Enum.filter(children, fn (v) -> v != nil end)
+
+    opts = [strategy: :one_for_one, name: MlDHT.Supervisor]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
     # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: MlDHT.Supervisor]
     Supervisor.start_link(children, opts)
   end
 
@@ -52,7 +68,7 @@ defmodule MlDHT do
            end)
   """
   @spec search(infohash, fun) :: atom
-  defdelegate search(infohash, callback),                to: DHTServer.Worker
+  defdelegate search(infohash, callback), to: DHTServer.Worker
 
   @doc ~S"""
   This function needs an infohash as binary and callback function as
