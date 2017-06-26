@@ -1,6 +1,6 @@
-defmodule MlDHT do
+defmodule MLDHT do
   @moduledoc ~S"""
-  MlDHT is an Elixir package that provides a Kademlia Distributed Hash Table
+  MLDHT is an Elixir package that provides a Kademlia Distributed Hash Table
   (DHT) implementation according to [BitTorrent Enhancement Proposals (BEP)
   05](http://www.bittorrent.org/beps/bep_0005.html). This specific
   implementation is called "mainline" variant.
@@ -34,7 +34,7 @@ defmodule MlDHT do
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
     # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: MlDHT.Supervisor]
+    opts = [strategy: :one_for_one, name: MLDHT.Supervisor]
     Supervisor.start_link(children, opts)
   end
 
@@ -46,7 +46,7 @@ defmodule MlDHT do
   ## Example
       iex> "3F19B149F53A50E14FC0B79926A391896EABAB6F" ## Ubuntu 15.04
             |> Base.decode16!
-            |> MlDHT.search(fn(node) ->
+            |> MLDHT.search(fn(node) ->
              {ip, port} = node
              IO.puts "ip: #{inpsect ip} port: #{port}"
            end)
@@ -63,7 +63,7 @@ defmodule MlDHT do
   ## Example
       iex> "3F19B149F53A50E14FC0B79926A391896EABAB6F" ## Ubuntu 15.04
            |> Base.decode16!
-           |> MlDHT.search_announce(fn(node) ->
+           |> MLDHT.search_announce(fn(node) ->
              {ip, port} = node
              IO.puts "ip: #{inspect ip} port: #{port}"
            end)
@@ -79,7 +79,7 @@ defmodule MlDHT do
   ## Example
       iex> "3F19B149F53A50E14FC0B79926A391896EABAB6F" ## Ubuntu 15.04
            |> Base.decode16!
-           |> MlDHT.search_announce(fn(node) ->
+           |> MLDHT.search_announce(fn(node) ->
              {ip, port} = node
              IO.puts "ip: #{inspect ip} port: #{port}"
            end, 6881)
