@@ -1,4 +1,4 @@
-defmodule MlDHT.Mixfile do
+defmodule MLDHT.Mixfile do
   use Mix.Project
 
   def project do
@@ -13,7 +13,7 @@ defmodule MlDHT.Mixfile do
   end
 
   def application do
-    [mod: {MlDHT, []},
+    [mod: {MLDHT, []},
      env: [
        port: 6881,
        bootstrap_nodes: [
