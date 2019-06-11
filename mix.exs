@@ -28,7 +28,7 @@ defmodule MlDHT.Mixfile do
 
   defp deps do
     [{:bencodex,      "~> 1.0.0"},
-     {:krpc_protocol, "~> 0.0.3"},
+     {:krpc_protocol, "~> 0.0.4"},
      {:ex_doc,        "~> 0.10",  only: :dev},
      {:pretty_hex,    "~> 0.0.1", only: :dev}
     ]
