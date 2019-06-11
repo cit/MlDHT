@@ -36,7 +36,7 @@ defmodule MlDHT.Mixfile do
 
   defp description do
     """
-    Distributed Hash Table (DHT) is a storage and lookup system based on a peer-to-peer (P2P) system. The file sharing protocol BitTorrent makes use of a DHT to find new peers without using a central tracker. MLDHT, in particular, is an elixir package that provides a mainline DHT implementation according to BEP 05.
+    Distributed Hash Table (DHT) is a storage and lookup system based on a peer-to-peer (P2P) system. The file sharing protocol BitTorrent makes use of a DHT to find new peers. MLDHT, in particular, is an elixir package that provides a mainline DHT implementation according to BEP 05.
     """
   end
 
