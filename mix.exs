@@ -42,7 +42,7 @@ defmodule MlDHT.Mixfile do
 
   defp package do
     [name:        :mldht,
-     files:       ["lib", "priv", "mix.exs", "README*", "readme*", "LICENSE*", "license*"],
+     files:       ["lib", "mix.exs", "README*", "LICENSE*"],
      maintainers: ["Florian Adamsky"],
      licenses:    ["MIT"],
      links:       %{"GitHub" => "https://github.com/cit/MLDHT"}]
