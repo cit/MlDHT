@@ -163,7 +163,7 @@ defmodule DHTServer.Worker do
 
     raw_data
     |> :binary.list_to_bin
-    |> String.rstrip(?\n)
+    |> String.trim_trailing("\n")
     |> KRPCProtocol.decode
     |> handle_message({socket, get_ip_vers(socket)}, ip, port, state)
   end
@@ -363,7 +363,7 @@ defmodule DHTServer.Worker do
   defp resolve_hostnames([node_tuple | tail], inet, result) do
     {id, host, port} = node_tuple
 
-    case :inet.getaddr(String.to_char_list(host), inet) do
+    case :inet.getaddr(String.to_charlist(host), inet) do
       {:ok, ip_addr}  ->
         resolve_hostnames(tail, inet, result ++ [{id, ip_addr, port}])
       {:error, _code} ->
