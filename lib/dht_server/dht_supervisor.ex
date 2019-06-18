@@ -24,11 +24,11 @@ defmodule MlDHT.Supervisor do
     ## According to BEP 32 there are two distinct DHTs: the IPv4 DHT, and the
     ## IPv6 DHT. This means we need two seperate routing tables for each IP
     ## version.
-    children = [] ++ [routing_table_for(:ipv4)] ++ [routing_table_for(:ipv6)]
-
-    children = children ++ [
-      worker(DHTServer.Worker,  []),
-      worker(DHTServer.Storage, [])
+    children = [
+      routing_table_for(:ipv4),
+      routing_table_for(:ipv6),
+      {DHTServer.Worker, name: DHTServer.Worker},
+      worker(DHTServer.Storage, []) # TODO: pass a name to Storage and allow multiple Storages (see Worker)
     ]
 
     children = Enum.filter(children, fn (v) -> v != nil end)

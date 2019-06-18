@@ -12,12 +12,10 @@ defmodule DHTServer.Worker do
   alias RoutingTable.Search, as: Search
   alias RoutingTable.Worker, as: RoutingTable
 
-  @name __MODULE__
-
   @type ip_vers :: :ipv4 | :ipv6
 
-  def start_link do
-    GenServer.start_link(__MODULE__, [], name: @name)
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, :ok, opts)
   end
 
 
@@ -29,8 +27,8 @@ defmodule DHTServer.Worker do
   ## Example
       iex> DHTServer.Worker.bootstrap
   """
-  def bootstrap do
-    GenServer.cast(@name, :bootstrap)
+  def bootstrap(worker_pid) do
+    GenServer.cast(worker_pid, :bootstrap)
   end
 
 
@@ -46,16 +44,16 @@ defmodule DHTServer.Worker do
              IO.puts "ip: #{ip} port: #{port}"
            end)
   """
-  def search(infohash, callback) do
-    GenServer.cast(@name, {:search, infohash, callback})
+  def search(worker_pid, infohash, callback) do
+    GenServer.cast(worker_pid, {:search, infohash, callback})
   end
 
-  def search_announce(infohash, callback) do
-    GenServer.cast(@name, {:search_announce, infohash, callback})
+  def search_announce(worker_pid, infohash, callback) do
+    GenServer.cast(worker_pid, {:search_announce, infohash, callback})
   end
 
-  def search_announce(infohash, port, callback) do
-    GenServer.cast(@name, {:search_announce, infohash, port, callback})
+  def search_announce(worker_pid, infohash, port, callback) do
+    GenServer.cast(worker_pid, {:search_announce, infohash, port, callback})
   end
 
 
@@ -75,7 +73,7 @@ defmodule DHTServer.Worker do
     end
   end
 
-  def init([]) do
+  def init(:ok) do
     cfg_ipv6_is_enabled? = Application.get_env(:mldht, :ipv6)
     cfg_ipv4_is_enabled? = Application.get_env(:mldht, :ipv4)
 
