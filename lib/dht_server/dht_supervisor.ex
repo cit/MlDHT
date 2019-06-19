@@ -27,7 +27,7 @@ defmodule MlDHT.Supervisor do
     children = [
       routing_table_for(:ipv4),
       routing_table_for(:ipv6),
-      {DHTServer.Worker, name: DHTServer.Worker},
+      {DynamicSupervisor, name: DHTServer.WorkerSupervisor, strategy: :one_for_one},
       worker(DHTServer.Storage, []) # TODO: pass a name to Storage and allow multiple Storages (see Worker)
     ]
 
