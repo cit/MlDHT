@@ -7,31 +7,36 @@ defmodule MlDHT.Supervisor do
 
   """
 
-  defp routing_table_for(ip_version) do
-    if Application.get_env(:mldht, ip_version) do
-      worker(RoutingTable.Worker, [ip_version], [id: ip_version])
-    end
-  end
-
   @doc false
   def start_link(opts \\ []) do
     Supervisor.start_link(__MODULE__, :ok, opts)
   end
 
+  @impl true
   def init(:ok) do
     ## Define workers and child supervisors to be supervised
 
-    ## According to BEP 32 there are two distinct DHTs: the IPv4 DHT, and the
-    ## IPv6 DHT. This means we need two seperate routing tables for each IP
-    ## version.
+    # ## According to BEP 32 there are two distinct DHTs: the IPv4 DHT, and the
+    # ## IPv6 DHT. This means we need two seperate routing tables for each IP
+    # ## version.
+    # children = [
+    #   (if Application.get_env(:mldht, :ipv4) do
+    #     {RoutingTable.Supervisor, [:ipv4, name: RoutingTable.IPv4.Supervisor]}
+    #   end),
+    #   (if Application.get_env(:mldht, :ipv6) do
+    #     {RoutingTable.Supervisor, [:ipv6, name: RoutingTable.IPv6.Supervisor]}
+    #   end),
+    #   {DHTServer.Worker, name: DHTServer.Worker},
+    #   worker(DHTServer.Storage, []), # TODO: pass a name to Storage and allow multiple Storages (see Worker)
+    # ] |> Enum.reject(&is_nil/1)
+
     children = [
-      routing_table_for(:ipv4),
-      routing_table_for(:ipv6),
-      {DynamicSupervisor, name: DHTServer.WorkerSupervisor, strategy: :one_for_one},
-      worker(DHTServer.Storage, []) # TODO: pass a name to Storage and allow multiple Storages (see Worker)
+      {DynamicSupervisor, name: MlDHT.RoutingTablesDynSupervisor, strategy: :one_for_one},
+      {DHTServer.Worker, name: DHTServer.Worker},
+      worker(DHTServer.Storage, []), # TODO: pass a name to Storage and allow multiple Storages (see Worker)
     ]
 
-    children = Enum.filter(children, fn (v) -> v != nil end)
+    IO.inspect(children, label: "MlDHT.Supervisor children")
 
     Supervisor.init(children, strategy: :one_for_one)
   end

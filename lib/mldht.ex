@@ -13,11 +13,6 @@ defmodule MlDHT do
   def start(_type, _args) do
     # start the main supervisor
     MlDHT.Supervisor.start_link(name: MlDHT.Supervisor)
-
-    # start a single Worker under the dynamic worker supervisor,
-    # which, in turn, is supvised by the main supervisor
-    DynamicSupervisor.start_child(DHTServer.WorkerSupervisor,
-      {DHTServer.Worker, [name: DHTServer.Worker]})
   end
 
   #################################
