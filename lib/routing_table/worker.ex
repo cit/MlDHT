@@ -15,16 +15,16 @@ defmodule RoutingTable.Worker do
   #############
 
   ## 5 Minutes
-  @review_time 60 * 5
+  @review_time 60 * 5 * 1000
 
-  ## 15 minutes
-  @response_time 60 * 5
+  ## 5 minutes
+  @response_time 60 * 5 * 1000
 
   ## 30 seconds
-  @neighbourhood_maintenance_time 30
+  @neighbourhood_maintenance_time 30 * 1000
 
   ## 3 minutes
-  @bucket_maintenance_time 60 * 1
+  @bucket_maintenance_time 60 * 3 * 1000
 
   ##############
   # Public API #
@@ -77,15 +77,14 @@ defmodule RoutingTable.Worker do
 
   def init([node_id]) do
     ## Start timer for peer review
-    Process.send_after(self(), :review, @review_time * 1000)
+    Process.send_after(self(), :review, @review_time)
 
     ## Start timer for neighbourhood maintenance
     Process.send_after(self(), :neighbourhood_maintenance,
-                       @neighbourhood_maintenance_time * 1000)
+                       @neighbourhood_maintenance_time)
 
     ## Start timer for bucket maintenance
-    Process.send_after(self(), :bucket_maintenance, @bucket_maintenance_time *
-                       1000)
+    Process.send_after(self(), :bucket_maintenance, @bucket_maintenance_time)
 
     {:ok, %{node_id: node_id, buckets: [Bucket.new(0)]}}
   end
@@ -117,7 +116,7 @@ defmodule RoutingTable.Worker do
     end)
 
     ## Restart the Timer
-    Process.send_after(self(), :review, @review_time * 1000)
+    Process.send_after(self(), :review, @review_time)
 
     {:noreply, [node_id: state[:node_id], buckets: new_buckets]}
   end
@@ -137,8 +136,7 @@ defmodule RoutingTable.Worker do
     end
 
     ## Restart the Timer
-    Process.send_after(self(), :neighbourhood_maintenance,
-                       @neighbourhood_maintenance_time * 1000)
+    Process.send_after(self(), :neighbourhood_maintenance, @neighbourhood_maintenance_time)
 
     {:noreply, state}
   end
@@ -167,8 +165,7 @@ defmodule RoutingTable.Worker do
       end
     end)
 
-    Process.send_after(self(), :bucket_maintenance, @bucket_maintenance_time *
-                       1000)
+    Process.send_after(self(), :bucket_maintenance, @bucket_maintenance_time)
 
     {:noreply, state}
   end
