@@ -34,8 +34,9 @@ defmodule RoutingTable.Worker do
   # Public API #
   ##############
 
-  def start_link(name) do
-    GenServer.start_link(__MODULE__, ["AAAAAAAAAAAAAAAAAAAA"], name: name)
+  def start_link(opts) do
+    Logger.debug "Starting RoutingTable worker: #{inspect(opts[:name])}"
+    GenServer.start_link(__MODULE__, ["AAAAAAAAAAAAAAAAAAAA"], opts)
   end
 
   def add(name, remote_node_id, address, socket) do

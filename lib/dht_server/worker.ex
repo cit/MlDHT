@@ -15,7 +15,8 @@ defmodule DHTServer.Worker do
   @type ip_vers :: :ipv4 | :ipv6
 
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, :ok, opts)
+    IO.inspect(opts, label: "DHTServer.Worker.start_link")
+    GenServer.start_link(__MODULE__, opts[:node_id], opts)
   end
 
 
@@ -73,7 +74,8 @@ defmodule DHTServer.Worker do
     end
   end
 
-  def init(:ok) do
+  def init(node_id) do
+
     cfg_ipv6_is_enabled? = Application.get_env(:mldht, :ipv6)
     cfg_ipv4_is_enabled? = Application.get_env(:mldht, :ipv4)
 
@@ -81,9 +83,6 @@ defmodule DHTServer.Worker do
       raise "Configuration failure: Either ipv4 or ipv6 has to be set to true."
     end
 
-    ## Generate a new node ID
-    node_id = Utils.gen_node_id()
-    Logger.debug "Node-ID: #{Base.encode16 node_id}"
 
     cfg_port = Application.get_env(:mldht, :port)
     socket   = if cfg_ipv4_is_enabled?, do: create_udp_socket(cfg_port, :ipv4), else: nil
@@ -92,31 +91,41 @@ defmodule DHTServer.Worker do
     ## Change secret of the token every 5 minutes
     Process.send_after(self(), :change_secret, 60 * 1000 * 5)
 
+
     state = %{node_id: node_id, socket: socket, socket6: socket6, old_secret:
               nil, secret: Utils.gen_secret}
 
     ## Setup routingtable for IPv4
     if cfg_ipv4_is_enabled? do
-      start_rtable(:ipv4_routingtable_supervisor, :ipv4, :ipv4_nodesup)
-      RoutingTable.Worker.node_id(:ipv4, node_id)
+      start_rtable(node_id, "ipv4")
+      RoutingTable.Worker.node_id(ipv4_rtable(node_id), node_id)
       bootstrap(state, {socket, :inet})
     end
 
     ## Setup routingtable for IPv6
     if cfg_ipv6_is_enabled? do
-      start_rtable(:ipv6_routingtable_supervisor, :ipv6, :ipv6_nodesup)
-      RoutingTable.Worker.node_id(:ipv6, node_id)
+      start_rtable(node_id, "ipv6")
+      RoutingTable.Worker.node_id(ipv6_rtable(node_id), node_id)
       bootstrap(state, {socket6, :inet6})
     end
 
     {:ok, state}
   end
 
-  defp start_rtable(rt_sup_name, rt_worker_name, rt_node_sup_name ) do
+  defp start_rtable(node_id, rt_name) do
+    node_id_enc = Base.encode16 node_id
     DynamicSupervisor.start_child(
-        MlDHT.RoutingTablesDynSupervisor,
-      {RoutingTable.Supervisor, %{args: [rt_worker_name: rt_worker_name, rt_node_sup_name: rt_node_sup_name],
-                                  opts: [name: rt_sup_name]}})
+      MlDHT.Registry.get_pid(node_id_enc <> "_rtable_dsup"),
+      {RoutingTable.Supervisor, node_id_enc: node_id_enc, rt_name: rt_name})
+  end
+
+  defp ipv4_rtable(node_id) do
+    node_id_enc = Base.encode16 node_id
+    MlDHT.Registry.get_pid(node_id_enc <> "_rtable_ipv4_worker")
+  end
+  defp ipv6_rtable(node_id) do
+    node_id_enc = Base.encode16 node_id
+    MlDHT.Registry.get_pid(node_id_enc <> "_rtable_ipv6_worker")
   end
 
   def handle_cast({:bootstrap, socket_tuple}, state) do
@@ -125,7 +134,7 @@ defmodule DHTServer.Worker do
   end
 
   def handle_cast({:search_announce, infohash, callback}, state) do
-    nodes = RoutingTable.Worker.closest_nodes(:ipv4, infohash)
+    nodes = RoutingTable.Worker.closest_nodes(ipv4_rtable(state.node_id), infohash)
 
     Search.start_link(state.socket, state.node_id)
     |> Search.get_peers(target: infohash, start_nodes: nodes,
@@ -135,7 +144,7 @@ defmodule DHTServer.Worker do
   end
 
   def handle_cast({:search_announce, infohash, callback, port}, state) do
-    nodes = RoutingTable.Worker.closest_nodes(:ipv4, infohash)
+    nodes = RoutingTable.Worker.closest_nodes(ipv4_rtable(state.node_id), infohash)
 
     Search.start_link(state.socket, state.node_id)
     |> Search.get_peers(target: infohash, start_nodes: nodes,
@@ -145,7 +154,7 @@ defmodule DHTServer.Worker do
   end
 
   def handle_cast({:search, infohash, callback}, state) do
-    nodes = RoutingTable.Worker.closest_nodes(:ipv4, infohash)
+    nodes = RoutingTable.Worker.closest_nodes(ipv4_rtable(state.node_id), infohash)
 
     Search.start_link(state.socket, state.node_id)
     |> Search.get_peers(target: infohash, start_nodes: nodes, port: 0,

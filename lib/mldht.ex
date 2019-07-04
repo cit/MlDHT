@@ -1,6 +1,10 @@
 defmodule MlDHT do
   use Application
 
+  require Logger
+  alias DHTServer.Utils, as: Utils
+
+
   @moduledoc ~S"""
   MlDHT is an Elixir package that provides a Kademlia Distributed Hash Table
   (DHT) implementation according to [BitTorrent Enhancement Proposals (BEP)
@@ -11,8 +15,14 @@ defmodule MlDHT do
 
   @doc false
   def start(_type, _args) do
+    MlDHT.Registry.start()
+
+    ## Generate a new node ID
+    node_id = Utils.gen_node_id()
+    Logger.debug "Node-ID: #{Base.encode16 node_id}"
+
     # start the main supervisor
-    MlDHT.Supervisor.start_link(name: MlDHT.Supervisor)
+    MlDHT.Supervisor.start_link(node_id: node_id, name: {:via, Registry, {MlDHT.Registry, node_id <> "_sup"}})
   end
 
   #################################

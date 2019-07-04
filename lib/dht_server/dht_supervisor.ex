@@ -4,35 +4,24 @@ defmodule MlDHT.Supervisor do
  @moduledoc ~S"""
   Root Supervisor for MlDHT
 
-
   """
 
   @doc false
-  def start_link(opts \\ []) do
-    Supervisor.start_link(__MODULE__, :ok, opts)
+  #TODO: use Keyword.fetch!/2 to enforce the :node_id option
+  def start_link(opts) do
+    Supervisor.start_link(__MODULE__, {:ok, opts[:node_id]}, opts)
   end
 
   @impl true
-  def init(:ok) do
-    ## Define workers and child supervisors to be supervised
-
-    # ## According to BEP 32 there are two distinct DHTs: the IPv4 DHT, and the
-    # ## IPv6 DHT. This means we need two seperate routing tables for each IP
-    # ## version.
-    # children = [
-    #   (if Application.get_env(:mldht, :ipv4) do
-    #     {RoutingTable.Supervisor, [:ipv4, name: RoutingTable.IPv4.Supervisor]}
-    #   end),
-    #   (if Application.get_env(:mldht, :ipv6) do
-    #     {RoutingTable.Supervisor, [:ipv6, name: RoutingTable.IPv6.Supervisor]}
-    #   end),
-    #   {DHTServer.Worker, name: DHTServer.Worker},
-    #   worker(DHTServer.Storage, []), # TODO: pass a name to Storage and allow multiple Storages (see Worker)
-    # ] |> Enum.reject(&is_nil/1)
-
+  def init({:ok, node_id}) do
+    node_id_enc = Base.encode16 node_id
     children = [
-      {DynamicSupervisor, name: MlDHT.RoutingTablesDynSupervisor, strategy: :one_for_one},
-      {DHTServer.Worker, name: DHTServer.Worker},
+      {DynamicSupervisor,
+        name: MlDHT.Registry.via(node_id_enc <> "_rtable_dsup"),
+        strategy: :one_for_one},
+      {DHTServer.Worker,
+        node_id: node_id,
+        name: MlDHT.Registry.via(node_id_enc <> "_worker")},
       worker(DHTServer.Storage, []), # TODO: pass a name to Storage and allow multiple Storages (see Worker)
     ]
 
