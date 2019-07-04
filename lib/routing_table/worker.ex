@@ -139,9 +139,14 @@ defmodule RoutingTable.Worker do
   neighbourhood.
   """
   def handle_info(:neighbourhood_maintenance, state) do
-    case random_node(state.buckets) do
+    case random_node(state.cache) do
       node_pid when is_pid(node_pid) ->
-        Node.send_find_node(node_pid, Distance.gen_node_id(152, state.node_id))
+        ## Start find_node search
+        target = Distance.gen_node_id(152, state[:node_id])
+        node    = Node.to_tuple(node_pid)
+
+        Search.start_link(Node.socket(node_pid), state[:node_id])
+        |> Search.find_node(target: target, start_nodes: [node])
       nil ->
         Logger.info "Neighbourhood Maintenance: No nodes in our routing table."
     end
