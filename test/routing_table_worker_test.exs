@@ -82,4 +82,32 @@ defmodule RoutingTable.Worker.Test do
     assert Process.alive?(node_pid) == false
   end
 
+  test "if routing table size and cache size are equal with two elements" do
+    name = :cache_test
+    {:ok, _registry} = RoutingTable.start_link(name)
+    RoutingTable.node_id(name, "AAAAAAAAAAAAAAAAAAAB")
+
+    RoutingTable.add(name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
+    RoutingTable.add(name, "CCCCCCCCCCCCCCCCCCCC", {{127, 0, 0, 1}, 6881}, 23)
+
+    assert RoutingTable.size(name) == RoutingTable.cache_size(name)
+  end
+
+  test "if routing table size and cache size are equal with ten elements" do
+    name = :cache_test
+    {:ok, _registry} = RoutingTable.start_link(name)
+    RoutingTable.node_id(name, "AAAAAAAAAAAAAAAAAAAB")
+
+    Enum.map(?B .. ?Z, fn(x) -> String.duplicate(<<x>>, 20) end)
+    |> Enum.each(fn(node_id) ->
+      RoutingTable.add(name, node_id, {{127, 0, 0, 1}, 6881}, 23)
+    end)
+
+    RoutingTable.del(name, "BBBBBBBBBBBBBBBBBBBB")
+    RoutingTable.del(name, "CCCCCCCCCCCCCCCCCCCC")
+    RoutingTable.del(name, "DDDDDDDDDDDDDDDDDDDD")
+
+    assert RoutingTable.size(name) == RoutingTable.cache_size(name)
+  end
+
 end

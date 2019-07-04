@@ -402,14 +402,18 @@ defmodule DHTServer.Worker do
 
 
   defp query_received(node_id, ip_port, {socket, ip_vers}) do
-    if node_pid = RoutingTable.get(ip_vers, node_id, ip_port, socket) do
+    if node_pid = RoutingTable.get(ip_vers, node_id) do
       Node.update(node_pid, :last_query_rcv)
+    else
+      RoutingTable.add(ip_vers, node_id, ip_port, socket)
     end
   end
 
   defp response_received(node_id, ip_port, {socket, ip_vers}) do
-    if node_pid = RoutingTable.get(ip_vers, node_id, ip_port, socket) do
+    if node_pid = RoutingTable.get(ip_vers, node_id) do
       Node.update(node_pid, :last_response_rcv)
+    else
+      RoutingTable.add(ip_vers, node_id, ip_port, socket)
     end
   end
 
