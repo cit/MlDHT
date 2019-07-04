@@ -59,7 +59,7 @@ defmodule RoutingTable.Worker.Test do
     RoutingTable.print(@name)
     RoutingTable.closest_nodes(@name, Base.decode16!("DAC8FAC14C12BB46E25F15D810BBD14267AD4ECA"))
 
-    Enum.map(nodes, fn(x) -> RoutingTable.del(@name, Base.decode16!(x)) end)
+    # Enum.map(nodes, fn(x) -> RoutingTable.del(@name, Base.decode16!(x)) end)
     # RoutingTable.print
     RoutingTable.node_id(@name, "AA")
   end
@@ -70,6 +70,16 @@ defmodule RoutingTable.Worker.Test do
 
     assert RoutingTable.size(@name) == 1
     RoutingTable.del(@name, "BB")
+  end
+
+
+  test "if del() really deletes the node from the routing table" do
+    RoutingTable.add(@name, "BB", {{127, 0, 0, 1}, 6881}, 23)
+    node_pid = RoutingTable.get(@name, "BB")
+
+    assert Process.alive?(node_pid) == true
+    RoutingTable.del(@name, "BB")
+    assert Process.alive?(node_pid) == false
   end
 
 end

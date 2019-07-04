@@ -389,9 +389,16 @@ defmodule RoutingTable.Worker do
   TODO
   """
   def del_node(buckets, node_id) do
-    Enum.map(buckets, fn(bucket) ->
+    node_pid    = buckets |> get_node(node_id)
+    new_buckets = buckets
+    |> Enum.map(fn(bucket) ->
       Bucket.del(bucket, node_id)
     end)
+
+    ## Stop the node
+    Node.stop(node_pid)
+
+    new_buckets
   end
 
   @doc """
