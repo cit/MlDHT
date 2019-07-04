@@ -21,6 +21,10 @@ defmodule RoutingTable.Node do
     GenServer.call(pid, :id)
   end
 
+  def socket(pid) do
+    GenServer.call(pid, :socket)
+  end
+
   def goodness(pid) do
     GenServer.call(pid, :goodness)
   end
@@ -103,6 +107,10 @@ defmodule RoutingTable.Node do
 
   def handle_call(:id, _from, state) do
     {:reply, state.node_id, state}
+  end
+
+  def handle_call(:socket, _from, state) do
+    {:reply, state.socket, state}
   end
 
   def handle_call(:goodness, _from, state) do

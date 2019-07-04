@@ -6,9 +6,10 @@ defmodule RoutingTable.Worker do
   require Logger
   require Bitwise
 
-  alias RoutingTable.Node
-  alias RoutingTable.Bucket
-  alias RoutingTable.Distance
+  alias RoutingTable.Node,     as: Node
+  alias RoutingTable.Bucket,   as: Bucket
+  alias RoutingTable.Distance, as: Distance
+  alias RoutingTable.Search,   as: Search
 
   #############
   # Constants #
@@ -25,6 +26,9 @@ defmodule RoutingTable.Worker do
 
   ## 3 minutes
   @bucket_maintenance_time 60 * 3 * 1000
+
+  ## 15 minutes (in seconds)
+  @bucket_max_idle_time 60 * 15
 
   ##############
   # Public API #
@@ -143,23 +147,33 @@ defmodule RoutingTable.Worker do
 
   @doc """
   This function gets called by an external timer. It iterates through all
-  buckets and checks if a bucket has less than 6 nodes and not updated during
-  the last 10 minutes. If this is the case, then we will pick a random node and
-  start a find_node query with a random_node from that bucket.
+  buckets and checks if a bucket has less than 6 nodes and was not updated
+  during the last 15 minutes. If this is the case, then we will pick a random
+  node and start a find_node query with a random_node from that bucket.
+
+  Excerpt from BEP 0005: "Buckets that have not been changed in 15 minutes
+  should be "refreshed." This is done by picking a random ID in the range of the
+  bucket and performing a find_nodes search on it."
   """
   def handle_info(:bucket_maintenance, state) do
     state[:buckets]
     |> Stream.with_index
     |> Enum.map(fn({bucket, index}) ->
-      if Bucket.age(bucket) >= 600 and Bucket.size(bucket) < 6 do
-        ## Pick a random node from our routing table and send a find_node
-        ## request with a target from that bucket
+      if Bucket.age(bucket) >= @bucket_max_idle_time and Bucket.size(bucket) < 6 do
         case random_node(state[:buckets]) do
           node_pid when is_pid(node_pid) ->
-            Logger.debug "Index: #{index}"
-            Node.send_find_node(node_pid, Distance.gen_node_id(index, state[:node_id]))
+            node = Node.to_tuple(node_pid)
+
+            ## Generate a random node_id based on the bucket
+            target = Distance.gen_node_id(index, state[:node_id])
+
+            Logger.info "Staring find_node search on bucket #{index}"
+
+            ## Start find_node search
+            Search.start_link(Node.socket(node_pid), state[:node_id])
+            |> Search.find_node(target: target, start_nodes: [node])
           nil ->
-            Logger.info "Bucket Maintenance: No nodes in our routing table."
+            Logger.warn "Bucket Maintenance: No nodes in our routing table."
         end
 
       end
