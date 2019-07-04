@@ -90,7 +90,10 @@ defmodule RoutingTable.Worker do
     ## Start timer for bucket maintenance
     Process.send_after(self(), :bucket_maintenance, @bucket_maintenance_time)
 
-    {:ok, %{node_id: node_id, buckets: [Bucket.new(0)]}}
+    {:ok, %{
+        node_id: node_id,
+        buckets: [Bucket.new(0)]
+     }}
   end
 
 
@@ -99,7 +102,7 @@ defmodule RoutingTable.Worker do
   the last time a node has responded to our requests.
   """
   def handle_info(:review, state) do
-    new_buckets = Enum.map(state[:buckets], fn(bucket) ->
+    new_buckets = Enum.map(state.buckets, fn(bucket) ->
       Bucket.filter(bucket, fn(pid) ->
         time = Node.last_time_responded(pid)
         cond do
@@ -122,7 +125,7 @@ defmodule RoutingTable.Worker do
     ## Restart the Timer
     Process.send_after(self(), :review, @review_time)
 
-    {:noreply, [node_id: state[:node_id], buckets: new_buckets]}
+    {:noreply, %{state | :buckets => new_buckets}}
   end
 
   @doc """
@@ -132,9 +135,9 @@ defmodule RoutingTable.Worker do
   neighbourhood.
   """
   def handle_info(:neighbourhood_maintenance, state) do
-    case random_node(state[:buckets]) do
+    case random_node(state.buckets) do
       node_pid when is_pid(node_pid) ->
-        Node.send_find_node(node_pid, Distance.gen_node_id(152, state[:node_id]))
+        Node.send_find_node(node_pid, Distance.gen_node_id(152, state.node_id))
       nil ->
         Logger.info "Neighbourhood Maintenance: No nodes in our routing table."
     end
@@ -156,21 +159,21 @@ defmodule RoutingTable.Worker do
   bucket and performing a find_nodes search on it."
   """
   def handle_info(:bucket_maintenance, state) do
-    state[:buckets]
+    state.buckets
     |> Stream.with_index
     |> Enum.map(fn({bucket, index}) ->
       if Bucket.age(bucket) >= @bucket_max_idle_time and Bucket.size(bucket) < 6 do
-        case random_node(state[:buckets]) do
+        case random_node(state.buckets) do
           node_pid when is_pid(node_pid) ->
             node = Node.to_tuple(node_pid)
 
             ## Generate a random node_id based on the bucket
-            target = Distance.gen_node_id(index, state[:node_id])
+            target = Distance.gen_node_id(index, state.node_id)
 
             Logger.info "Staring find_node search on bucket #{index}"
 
             ## Start find_node search
-            Search.start_link(Node.socket(node_pid), state[:node_id])
+            Search.start_link(Node.socket(node_pid), state.node_id)
             |> Search.find_node(target: target, start_nodes: [node])
           nil ->
             Logger.warn "Bucket Maintenance: No nodes in our routing table."
@@ -189,7 +192,7 @@ defmodule RoutingTable.Worker do
   target.
   """
   def handle_call({:closest_nodes, target}, _from, state ) do
-    list = state[:buckets]
+    list = state.buckets
     |> Enum.map(fn(bucket) -> bucket.nodes end)
     |> List.flatten
     |> Enum.sort(fn(x, y) -> Distance.xor_cmp(Node.id(x), Node.id(y), target, &(&1 < &2)) end)
@@ -204,20 +207,20 @@ defmodule RoutingTable.Worker do
   was successful, this function returns the pid, otherwise nil.
   """
   def handle_call({:get, node_id}, _from, state) do
-    {:reply, get_node(state[:buckets], node_id), state}
+    {:reply, get_node(state.buckets, node_id), state}
   end
 
   def handle_call({:get, node_id, address, socket}, _from, state) do
     node_tuple = {node_id, address, socket}
 
-    case get_node(state[:buckets], node_id) do
+    case get_node(state.buckets, node_id) do
       node_pid when node_pid != nil ->
         {:reply, node_pid, state}
       _ ->
-        new_buckets = add_node(state[:node_id], state[:buckets], node_tuple)
+        new_buckets = add_node(state.node_id, state.buckets, node_tuple)
         node_pid = get_node(new_buckets, node_id)
 
-        {:reply, node_pid, [node_id: state[:node_id], buckets: new_buckets]}
+        {:reply, node_pid, %{state | :buckets => new_buckets}}
     end
   end
 
@@ -225,7 +228,7 @@ defmodule RoutingTable.Worker do
   This function returns the number of nodes in our routing table as an integer.
   """
   def handle_call(:size, _from, state) do
-    size = state[:buckets]
+    size = state.buckets
     |> Enum.map(fn(b)-> Bucket.size(b) end)
     |> Enum.reduce(fn(x, acc) -> x + acc end)
 
@@ -237,11 +240,11 @@ defmodule RoutingTable.Worker do
   gets a string as a parameter, it will set this as our node id.
   """
   def handle_call(:node_id, _from, state) do
-    {:reply, state[:node_id], state}
+    {:reply, state.node_id, state}
   end
 
   def handle_call({:node_id, node_id}, _from, state) do
-    {:reply, :ok, [node_id: node_id, buckets: state[:buckets]]}
+    {:reply, :ok, %{state | :node_id => node_id}}
   end
 
   @doc """
@@ -249,11 +252,11 @@ defmodule RoutingTable.Worker do
   sucessful, it returns the node pid and if not it will return nil.
   """
   def handle_call({:add, node_id, address, socket}, _from, state) do
-    if not node_exists?(state[:buckets], node_id) do
-      node_tuple = {node_id, address, socket}
+    if not node_exists?(state.buckets, node_id) do
+      node_tuple  = {node_id, address, socket}
+      new_buckets = add_node(state.node_id, state.buckets, node_tuple)
 
-      {:reply, :ok, [node_id: state[:node_id],
-                     buckets: add_node(state[:node_id], state[:buckets], node_tuple)]}
+      {:reply, :ok, %{state | :buckets => new_buckets}}
     else
       {:reply, :ok, state}
     end
@@ -263,8 +266,7 @@ defmodule RoutingTable.Worker do
   This function deletes a node according to its node id.
   """
   def handle_call({:del, node_id}, _from, state) do
-    {:reply, :ok, [node_id: state[:node_id],
-                   buckets: del_node(state[:buckets], node_id)]}
+    {:reply, :ok, %{state | :buckets => del_node(state.buckets, node_id)}}
   end
 
 
@@ -273,7 +275,7 @@ defmodule RoutingTable.Worker do
   routing table.
   """
   def handle_cast(:print, state) do
-    state[:buckets]
+    state.buckets
     |> Enum.each(fn (bucket) ->
       Logger.debug inspect(bucket)
     end)
