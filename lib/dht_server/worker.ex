@@ -209,18 +209,29 @@ defmodule DHTServer.Worker do
     ## Get closest nodes for the requested target from the routing table
     nodes = ip_vers
     |> RoutingTable.closest_nodes(remote.target)
-    |> Enum.map(fn(pid) -> Node.to_tuple(pid) end)
+    |> Enum.map(fn(pid) ->
+      try do
+        if Process.alive?(pid) do
+          Node.to_tuple(pid)
+        end
+      rescue
+        e in RuntimeError -> Logger.error "Error in Node: #{e}"
+      end
+    end)
 
-    Logger.debug("[#{Base.encode16(remote.node_id)}] << find_node_reply")
+    if nodes != [] do
+      Logger.debug("[#{Base.encode16(remote.node_id)}] << find_node_reply")
 
-    nodes_args = if ip_vers == :ipv4, do: [nodes: nodes], else: [nodes6: nodes]
-    args = [node_id: state.node_id] ++ nodes_args ++ [tid: remote.tid]
-    Logger.debug "NODES ARGS: #{inspect args}"
-    payload = KRPCProtocol.encode(:find_node_reply, args)
+      nodes_args = if ip_vers == :ipv4, do: [nodes: nodes], else: [nodes6: nodes]
+      args = [node_id: state.node_id] ++ nodes_args ++ [tid: remote.tid]
+      Logger.debug "NODES ARGS: #{inspect args}"
+      payload = KRPCProtocol.encode(:find_node_reply, args)
 
-    Logger.debug(PrettyHex.pretty_hex(to_string(payload)))
+      Logger.debug(PrettyHex.pretty_hex(to_string(payload)))
 
-    :gen_udp.send(socket, ip, port, payload)
+      :gen_udp.send(socket, ip, port, payload)
+    end
+
 
     {:noreply, state}
   end
@@ -391,14 +402,18 @@ defmodule DHTServer.Worker do
 
 
   defp query_received(node_id, ip_port, {socket, ip_vers}) do
-    if node_pid = RoutingTable.get(ip_vers, node_id, ip_port, socket) do
+    if node_pid = RoutingTable.get(ip_vers, node_id) do
       Node.update(node_pid, :last_query_rcv)
+    else
+      RoutingTable.add(ip_vers, node_id, ip_port, socket)
     end
   end
 
   defp response_received(node_id, ip_port, {socket, ip_vers}) do
-    if node_pid = RoutingTable.get(ip_vers, node_id, ip_port, socket) do
+    if node_pid = RoutingTable.get(ip_vers, node_id) do
       Node.update(node_pid, :last_response_rcv)
+    else
+      RoutingTable.add(ip_vers, node_id, ip_port, socket)
     end
   end
 
