@@ -4,8 +4,8 @@ defmodule RoutingTable.Worker.Test do
   @name :test
 
   setup do
-    {:ok, _registry} = RoutingTable.Worker.start_link(:test)
-    RoutingTable.Worker.node_id(@name, "AA")
+    {:ok, _registry} = RoutingTable.start_link(name: @name)
+    RoutingTable.node_id(@name, "AA")
   end
 
   test "If the function node_id can set and get the node_id" do
