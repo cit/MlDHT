@@ -76,10 +76,10 @@ defmodule DHTServer.Worker do
 
   def init(node_id) do
 
-    cfg_ipv6_is_enabled? = Application.get_env(:mldht, :ipv6)
-    cfg_ipv4_is_enabled? = Application.get_env(:mldht, :ipv4)
+    cfg_ipv6_is_enabled? = Application.get_env(:mldht, :ipv6, false) # returns false in case the option is not set in the environment (setting the option to false or not setting the option at all has the same effect in this case)
+    cfg_ipv4_is_enabled? = Application.get_env(:mldht, :ipv4, false)
 
-    unless cfg_ipv4_is_enabled? || cfg_ipv6_is_enabled? do
+    unless cfg_ipv4_is_enabled? or cfg_ipv6_is_enabled? do
       raise "Configuration failure: Either ipv4 or ipv6 has to be set to true."
     end
 
@@ -223,7 +223,7 @@ defmodule DHTServer.Worker do
     query_received(remote.node_id, {ip, port}, {socket, ip_vers})
 
     ## Get closest nodes for the requested target from the routing table
-    nodes = ip_vers
+    nodes = ip_vers # TODO: ip_vers contains :ipv4 ... update
     |> RoutingTable.Worker.closest_nodes(remote.target)
     |> Enum.map(fn(pid) ->
       try do
