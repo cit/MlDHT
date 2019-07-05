@@ -79,7 +79,7 @@ defmodule DHTServer.Worker do
     cfg_ipv6_is_enabled? = Application.get_env(:mldht, :ipv6)
     cfg_ipv4_is_enabled? = Application.get_env(:mldht, :ipv4)
 
-    unless cfg_ipv4_is_enabled? or cfg_ipv6_is_enabled? do
+    unless cfg_ipv4_is_enabled? || cfg_ipv6_is_enabled? do
       raise "Configuration failure: Either ipv4 or ipv6 has to be set to true."
     end
 
