@@ -4,8 +4,8 @@ defmodule RoutingTable.Worker.Test do
   @name :test
 
   setup do
-    {:ok, _registry} = RoutingTable.start_link(name: @name)
-    RoutingTable.node_id(@name, "AA")
+    {:ok, _registry} = RoutingTable.Worker.start_link(name: @name)
+    RoutingTable.Worker.node_id(@name, "AA")
   end
 
   test "If the function node_id can set and get the node_id" do
@@ -82,7 +82,7 @@ defmodule RoutingTable.Worker.Test do
 
   test "if routing table size and cache size are equal with two elements" do
     name = :cache_test
-    {:ok, _registry} = RoutingTable.Worker.start_link(name)
+    {:ok, _registry} = RoutingTable.Worker.start_link(name: name)
     RoutingTable.Worker.node_id(name, "AAAAAAAAAAAAAAAAAAAB")
 
     RoutingTable.Worker.add(name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
@@ -93,7 +93,7 @@ defmodule RoutingTable.Worker.Test do
 
   test "if routing table size and cache size are equal with ten elements" do
     name = :cache_test
-    {:ok, _registry} = RoutingTable.Worker.start_link(name)
+    {:ok, _registry} = RoutingTable.Worker.start_link(name: name)
     RoutingTable.Worker.node_id(name, "AAAAAAAAAAAAAAAAAAAB")
 
     Enum.map(?B .. ?Z, fn(x) -> String.duplicate(<<x>>, 20) end)
@@ -112,7 +112,7 @@ defmodule RoutingTable.Worker.Test do
     name    = :closest_nodes
     node_id = "AAAAAAAAAAAAAAAAAAAB"
 
-    {:ok, _registry} = RoutingTable.Worker.start_link(name)
+    {:ok, _registry} = RoutingTable.Worker.start_link(name: name)
     RoutingTable.Worker.node_id(name, "AAAAAAAAAAAAAAAAAAAB")
 
     ## Generate close node_ids
