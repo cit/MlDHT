@@ -97,15 +97,15 @@ defmodule DHTServer.Worker do
 
     ## Setup routingtable for IPv4
     if cfg_ipv4_is_enabled? do
-      start_rtable(node_id, "ipv4")
-      RoutingTable.Worker.node_id(ipv4_rtable(node_id), node_id)
+      start_rtable(node_id, :ipv4)
+      RoutingTable.Worker.node_id(get_rtable(node_id, :ipv4), node_id)
       bootstrap(state, {socket, :inet})
     end
 
     ## Setup routingtable for IPv6
     if cfg_ipv6_is_enabled? do
-      start_rtable(node_id, "ipv6")
-      RoutingTable.Worker.node_id(ipv6_rtable(node_id), node_id)
+      start_rtable(node_id, :ipv6)
+      RoutingTable.Worker.node_id(get_rtable(node_id, :ipv6), node_id)
       bootstrap(state, {socket6, :inet6})
     end
 
@@ -114,18 +114,15 @@ defmodule DHTServer.Worker do
 
   defp start_rtable(node_id, rt_name) do
     node_id_enc = Base.encode16 node_id
+    rt_name = to_string(rt_name) # allows giving atoms as rt_name to this function, e.g. :ipv4
     DynamicSupervisor.start_child(
       MlDHT.Registry.get_pid(node_id_enc <> "_rtable_dsup"),
       {RoutingTable.Supervisor, node_id_enc: node_id_enc, rt_name: rt_name})
   end
 
-  defp ipv4_rtable(node_id) do
+  defp get_rtable(node_id, rt_name) do
     node_id_enc = Base.encode16 node_id
-    MlDHT.Registry.get_pid(node_id_enc <> "_rtable_ipv4_worker")
-  end
-  defp ipv6_rtable(node_id) do
-    node_id_enc = Base.encode16 node_id
-    MlDHT.Registry.get_pid(node_id_enc <> "_rtable_ipv6_worker")
+    MlDHT.Registry.get_pid(node_id_enc <> "_rtable_" <> to_string(rt_name) <> "_worker")
   end
 
   def handle_cast({:bootstrap, socket_tuple}, state) do
@@ -134,7 +131,7 @@ defmodule DHTServer.Worker do
   end
 
   def handle_cast({:search_announce, infohash, callback}, state) do
-    nodes = RoutingTable.Worker.closest_nodes(ipv4_rtable(state.node_id), infohash)
+    nodes = RoutingTable.Worker.closest_nodes(get_rtable(state.node_id, :ipv4), infohash)
 
     Search.start_link(state.socket, state.node_id)
     |> Search.get_peers(target: infohash, start_nodes: nodes,
@@ -144,7 +141,7 @@ defmodule DHTServer.Worker do
   end
 
   def handle_cast({:search_announce, infohash, callback, port}, state) do
-    nodes = RoutingTable.Worker.closest_nodes(ipv4_rtable(state.node_id), infohash)
+    nodes = RoutingTable.Worker.closest_nodes(get_rtable(state.node_id, :ipv4), infohash)
 
     Search.start_link(state.socket, state.node_id)
     |> Search.get_peers(target: infohash, start_nodes: nodes,
@@ -154,7 +151,7 @@ defmodule DHTServer.Worker do
   end
 
   def handle_cast({:search, infohash, callback}, state) do
-    nodes = RoutingTable.Worker.closest_nodes(ipv4_rtable(state.node_id), infohash)
+    nodes = RoutingTable.Worker.closest_nodes(get_rtable(state.node_id, :ipv4), infohash)
 
     Search.start_link(state.socket, state.node_id)
     |> Search.get_peers(target: infohash, start_nodes: nodes, port: 0,
@@ -223,7 +220,8 @@ defmodule DHTServer.Worker do
     query_received(remote.node_id, {ip, port}, {socket, ip_vers})
 
     ## Get closest nodes for the requested target from the routing table
-    nodes = ip_vers # TODO: ip_vers contains :ipv4 ... update
+    nodes = state.note_id
+    |> get_rtable(ip_vers)
     |> RoutingTable.Worker.closest_nodes(remote.target)
     |> Enum.map(fn(pid) ->
       try do
@@ -267,7 +265,8 @@ defmodule DHTServer.Worker do
       [node_id: state.node_id, values: values, tid: remote.tid, token: token]
     else
       ## Get the closest nodes for the requested info_hash
-      nodes = Enum.map(RoutingTable.Worker.closest_nodes(ip_vers, remote.info_hash), fn(pid) ->
+      rtable = get_rtable(state.node_id, ip_vers)
+      nodes = Enum.map(RoutingTable.Worker.closest_nodes(rtable, remote.info_hash), fn(pid) ->
         Node.to_tuple(pid)
       end)
 
@@ -418,7 +417,8 @@ defmodule DHTServer.Worker do
 
 
   defp query_received(node_id, ip_port, {socket, ip_vers}) do
-    if node_pid = RoutingTable.Worker.get(ip_vers, node_id) do
+    rtable = get_rtable(node_id, ip_vers)
+    if node_pid = RoutingTable.Worker.get(rtable, node_id) do
       Node.update(node_pid, :last_query_rcv)
     else
       RoutingTable.add(ip_vers, node_id, ip_port, socket)
@@ -426,7 +426,8 @@ defmodule DHTServer.Worker do
   end
 
   defp response_received(node_id, ip_port, {socket, ip_vers}) do
-    if node_pid = RoutingTable.Worker.get(ip_vers, node_id) do
+    rtable = get_rtable(node_id, ip_vers)
+    if node_pid = RoutingTable.Worker.get(rtable, node_id) do
       Node.update(node_pid, :last_response_rcv)
     else
       RoutingTable.add(ip_vers, node_id, ip_port, socket)
