@@ -311,7 +311,8 @@ defmodule RoutingTable.Worker do
       ## If the bucket has still some space left, we can just add the node to
       ## the bucket. Easy Peasy
       Bucket.has_space?(bucket) ->
-        new_bucket = Bucket.add(bucket, Node.start_link(own_node_id: my_node_id, node_tuple: node))
+        pid = Node.start_link(own_node_id: my_node_id, node_tuple: node_tuple)
+        new_bucket = Bucket.add(bucket, pid)
 
         :ets.insert(state.cache, {node_id, pid})
         state |> Map.put(:buckets, List.replace_at(buckets, index, new_bucket))
