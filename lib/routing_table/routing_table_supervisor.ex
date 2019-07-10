@@ -1,5 +1,6 @@
 defmodule RoutingTable.Supervisor do
   use Supervisor
+  require Logger
 
   @moduledoc ~S"""
     TODO
@@ -21,6 +22,7 @@ defmodule RoutingTable.Supervisor do
         MlDHT.Registry.via(node_id_enc   <> "_rtable_" <> rt_name <> "_nodes_dsup"),
         strategy: :one_for_one}
     ]
+    Logger.debug("RoutingTable.Supervisor children #{inspect(children)}")
     Supervisor.init(children, strategy: :one_for_one)
   end
 

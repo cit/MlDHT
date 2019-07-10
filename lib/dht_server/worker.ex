@@ -207,7 +207,7 @@ defmodule DHTServer.Worker do
 
   def handle_message({:ping, remote}, {socket, ip_vers}, ip, port, state) do
     Logger.debug "[#{Base.encode16(remote.node_id)}] >> ping"
-    query_received(remote.node_id, {ip, port}, {socket, ip_vers})
+    query_received(remote.node_id, state.node_id, {ip, port}, {socket, ip_vers})
 
     send_ping_reply(remote.node_id, remote.tid, ip, port, socket)
 
@@ -217,10 +217,10 @@ defmodule DHTServer.Worker do
 
   def handle_message({:find_node, remote}, {socket, ip_vers}, ip, port, state) do
     Logger.debug "[#{Base.encode16(remote.node_id)}] >> find_node"
-    query_received(remote.node_id, {ip, port}, {socket, ip_vers})
+    query_received(remote.node_id, state.node_id, {ip, port}, {socket, ip_vers})
 
     ## Get closest nodes for the requested target from the routing table
-    nodes = state.note_id
+    nodes = state.node_id
     |> get_rtable(ip_vers)
     |> RoutingTable.Worker.closest_nodes(remote.target)
     |> Enum.map(fn(pid) ->
@@ -254,7 +254,7 @@ defmodule DHTServer.Worker do
   ## Get_peers
   def handle_message({:get_peers, remote}, {socket, ip_vers}, ip, port, state) do
     Logger.debug "[#{Base.encode16(remote.node_id)}] >> get_peers"
-    query_received(remote.node_id, {ip, port}, {socket, ip_vers})
+    query_received(remote.node_id, state.node_id, {ip, port}, {socket, ip_vers})
 
     ## Generate a token for the requesting node
     token = :crypto.hash(:sha, Utils.tuple_to_ipstr(ip, port) <> state.secret)
@@ -283,7 +283,7 @@ defmodule DHTServer.Worker do
   ## Announce_peer
   def handle_message({:announce_peer, remote}, {socket, ip_vers}, ip, port, state) do
     Logger.debug "[#{Base.encode16(remote.node_id)}] >> announce_peer"
-    query_received(remote.node_id, {ip, port}, {socket, ip_vers})
+    query_received(remote.node_id, state.node_id, {ip, port}, {socket, ip_vers})
 
     if token_match(remote.token, ip, port, state.secret, state.old_secret) do
       Logger.debug "Valid Token"
@@ -321,7 +321,7 @@ defmodule DHTServer.Worker do
 
   def handle_message({:find_node_reply, remote}, {socket, ip_vers}, ip, port, state) do
     Logger.debug "[#{Base.encode16(remote.node_id)}] >> find_node_reply"
-    response_received(remote.node_id, {ip, port}, {socket, ip_vers})
+    response_received(remote.node_id, state.node_id, {ip, port}, {socket, ip_vers})
 
     pname = Search.tid_to_process_name(remote.tid)
     if Search.is_active?(remote.tid) do
@@ -346,7 +346,7 @@ defmodule DHTServer.Worker do
 
   def handle_message({:get_peer_reply, remote}, {socket, ip_vers}, ip, port, state) do
     Logger.debug "[#{Base.encode16(remote.node_id)}] >> get_peer_reply"
-    response_received(remote.node_id, {ip, port}, {socket, ip_vers})
+    response_received(remote.node_id, state.node_id, {ip, port}, {socket, ip_vers})
 
     pname = Search.tid_to_process_name(remote.tid)
     if Search.is_active?(remote.tid) do
@@ -358,7 +358,7 @@ defmodule DHTServer.Worker do
 
   def handle_message({:ping_reply, remote}, {socket, ip_vers}, ip, port, state) do
     Logger.debug "[#{Base.encode16(remote.node_id)}] >> ping_reply"
-    response_received(remote.node_id, {ip, port}, {socket, ip_vers})
+    response_received(remote.node_id, state.node_id, {ip, port}, {socket, ip_vers})
 
     {:noreply, state}
   end
@@ -416,21 +416,23 @@ defmodule DHTServer.Worker do
   end
 
 
-  defp query_received(node_id, ip_port, {socket, ip_vers}) do
-    rtable = get_rtable(node_id, ip_vers)
-    if node_pid = RoutingTable.Worker.get(rtable, node_id) do
+  defp query_received(remote_node_id, own_node_id, ip_port, {socket, ip_vers}) do
+    # TODO: node_id is not the own but the peer's node_id
+    rtable = get_rtable(own_node_id, ip_vers)
+    if node_pid = RoutingTable.Worker.get(rtable, remote_node_id) do
       Node.update(node_pid, :last_query_rcv)
     else
-      RoutingTable.add(ip_vers, node_id, ip_port, socket)
+      RoutingTable.Worker.add(ip_vers, remote_node_id, ip_port, socket)
     end
   end
 
-  defp response_received(node_id, ip_port, {socket, ip_vers}) do
-    rtable = get_rtable(node_id, ip_vers)
-    if node_pid = RoutingTable.Worker.get(rtable, node_id) do
+  defp response_received(remote_node_id, own_node_id, ip_port, {socket, ip_vers}) do
+    # TODO: node_id is not the own but the peer's node_id
+    rtable = get_rtable(own_node_id, ip_vers)
+    if node_pid = RoutingTable.Worker.get(rtable, remote_node_id) do
       Node.update(node_pid, :last_response_rcv)
     else
-      RoutingTable.add(ip_vers, node_id, ip_port, socket)
+      RoutingTable.Worker.add(ip_vers, remote_node_id, ip_port, socket)
     end
   end
 
