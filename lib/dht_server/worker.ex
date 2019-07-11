@@ -422,7 +422,7 @@ defmodule DHTServer.Worker do
     if node_pid = RoutingTable.Worker.get(rtable, remote_node_id) do
       Node.update(node_pid, :last_query_rcv)
     else
-      RoutingTable.Worker.add(ip_vers, remote_node_id, ip_port, socket)
+      RoutingTable.Worker.add(rtable, remote_node_id, ip_port, socket)
     end
   end
 
@@ -432,7 +432,7 @@ defmodule DHTServer.Worker do
     if node_pid = RoutingTable.Worker.get(rtable, remote_node_id) do
       Node.update(node_pid, :last_response_rcv)
     else
-      RoutingTable.Worker.add(ip_vers, remote_node_id, ip_port, socket)
+      RoutingTable.Worker.add(rtable, remote_node_id, ip_port, socket)
     end
   end
 
