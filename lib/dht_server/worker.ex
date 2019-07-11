@@ -229,7 +229,7 @@ defmodule DHTServer.Worker do
           Node.to_tuple(pid)
         end
       rescue
-        e in RuntimeError -> Logger.error "Error in Node: #{e}"
+        _e in Enum.EmptyError -> nil
       end
     end)
 
