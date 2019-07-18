@@ -13,11 +13,13 @@ defmodule RoutingTable.Supervisor do
 
   @impl true
   def init(args) do 
+    node_id     = args[:node_id]
     node_id_enc = args[:node_id_enc]
     rt_name     = args[:rt_name]
     children = [
-      {RoutingTable.Worker, name:
-        MlDHT.Registry.via(node_id_enc <> "_rtable_" <> rt_name <> "_worker")},
+      {RoutingTable.Worker, rt_name: rt_name,
+        node_id: node_id,
+        name: MlDHT.Registry.via(node_id_enc <> "_rtable_" <> rt_name <> "_worker")},
       {DynamicSupervisor, name:
         MlDHT.Registry.via(node_id_enc   <> "_rtable_" <> rt_name <> "_nodes_dsup"),
         strategy: :one_for_one}

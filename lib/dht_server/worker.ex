@@ -15,7 +15,7 @@ defmodule DHTServer.Worker do
   @type ip_vers :: :ipv4 | :ipv6
 
   def start_link(opts) do
-    IO.inspect(opts, label: "DHTServer.Worker.start_link")
+    # IO.inspect(opts, label: "DHTServer.Worker.start_link")
     GenServer.start_link(__MODULE__, opts[:node_id], opts)
   end
 
@@ -117,7 +117,7 @@ defmodule DHTServer.Worker do
     rt_name = to_string(rt_name) # allows giving atoms as rt_name to this function, e.g. :ipv4
     DynamicSupervisor.start_child(
       MlDHT.Registry.get_pid(node_id_enc <> "_rtable_dsup"),
-      {RoutingTable.Supervisor, node_id_enc: node_id_enc, rt_name: rt_name})
+      {RoutingTable.Supervisor, node_id: node_id, node_id_enc: node_id_enc, rt_name: rt_name})
   end
 
   defp get_rtable(node_id, rt_name) do
