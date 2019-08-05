@@ -1,4 +1,9 @@
 defmodule MlDHT do
+  use Application
+
+  require Logger
+  alias DHTServer.Utils, as: Utils
+
 
   @moduledoc ~S"""
   MlDHT is an Elixir package that provides a Kademlia Distributed Hash Table
@@ -6,8 +11,23 @@ defmodule MlDHT do
   05](http://www.bittorrent.org/beps/bep_0005.html). This specific
   implementation is called "mainline" variant.
 
-
   """
+
+  @doc false
+  def start(_type, _args) do
+    MlDHT.Registry.start()
+
+    ## Generate a new node ID
+    node_id = Utils.gen_node_id()
+    Logger.debug "Node-ID: #{Base.encode16 node_id}"
+
+    # start the main supervisor
+    MlDHT.Supervisor.start_link(node_id: node_id, name: {:via, Registry, {MlDHT.Registry, node_id <> "_sup"}})
+  end
+
+  #################################
+  # delegates
+  #################################
 
   @typedoc """
   A binary which contains the infohash of a torrent. An infohash is a SHA1
@@ -20,39 +40,6 @@ defmodule MlDHT do
   """
   @type tcp_port :: non_neg_integer
 
-  use Application
-
-  import Supervisor.Spec, warn: false
-
-  defp routing_table_for(ip_version) do
-    if Application.get_env(:mldht, ip_version) do
-      worker(RoutingTable.Worker, [ip_version], [id: ip_version])
-    end
-  end
-
-  @doc false
-  def start(_type, _args) do
-
-    ## Define workers and child supervisors to be supervised
-
-    ## According to BEP 32 there are two distinct DHTs: the IPv4 DHT, and the
-    ## IPv6 DHT. This means we need two seperate routing tables for each IP
-    ## version.
-    children = [] ++ [routing_table_for(:ipv4)] ++ [routing_table_for(:ipv6)]
-
-    children = children ++ [
-      worker(DHTServer.Worker,  []),
-      worker(DHTServer.Storage, [])
-    ]
-
-    children = Enum.filter(children, fn (v) -> v != nil end)
-
-    opts = [strategy: :one_for_one, name: MlDHT.Supervisor]
-
-    # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
-    # for other strategies and supported options
-    Supervisor.start_link(children, opts)
-  end
 
   @doc ~S"""
   This function needs an infohash as binary and a callback function as
@@ -68,7 +55,9 @@ defmodule MlDHT do
            end)
   """
   @spec search(infohash, fun) :: atom
-  defdelegate search(infohash, callback), to: DHTServer.Worker
+  def search(infohash, callback) do
+    DHTServer.Worker.search(DHTServer.Worker, infohash, callback)
+  end
 
   @doc ~S"""
   This function needs an infohash as binary and callback function as
@@ -85,7 +74,9 @@ defmodule MlDHT do
            end)
   """
   @spec search_announce(infohash, fun) :: atom
-  defdelegate search_announce(infohash, callback), to: DHTServer.Worker
+  def search_announce(infohash, callback) do
+    DHTServer.Worker.search_announce(DHTServer.Worker, infohash, callback)
+  end
 
   @doc ~S"""
   This function needs an infohash as binary, a callback function as parameter,
@@ -101,6 +92,8 @@ defmodule MlDHT do
            end, 6881)
   """
   @spec search_announce(infohash, fun, tcp_port) :: atom
-  defdelegate search_announce(infohash, callback, port), to: DHTServer.Worker
+  def search_announce(infohash, callback, port) do
+    DHTServer.Worker.search_announce(DHTServer.Worker, infohash, callback, port)
+  end
 
 end

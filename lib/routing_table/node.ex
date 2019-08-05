@@ -5,9 +5,8 @@ defmodule RoutingTable.Node do
 
   require Logger
 
-  def start_link(own_node_id, node_tuple) do
-    {:ok, pid} = GenServer.start_link(__MODULE__, [own_node_id, node_tuple])
-    pid
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, [opts[:own_node_id], opts[:node_tuple]])
   end
 
   @doc """

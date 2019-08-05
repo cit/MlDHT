@@ -4,14 +4,15 @@ defmodule RoutingTable.Worker.Test do
   @name :test
 
   setup do
-    {:ok, _registry} = RoutingTable.Worker.start_link(:test)
-    RoutingTable.Worker.node_id(@name, "AA")
+    start_supervised!({RoutingTable.Worker, [name: @name, node_id: "AA", rt_name: "test_rt"]})
+    :ok
   end
 
-  test "If the function node_id can set and get the node_id" do
-    RoutingTable.Worker.node_id(@name, "BB")
-    assert RoutingTable.Worker.node_id(@name) == "BB"
-  end
+  # INFO: This function is deprecated
+  # test "If the function node_id can set and get the node_id" do
+  #   RoutingTable.Worker.node_id(@name, "BB")
+  #   assert RoutingTable.Worker.node_id(@name) == "BB"
+  # end
 
   test "If the size of the table is 0 if we add and delete a node" do
     RoutingTable.Worker.add(@name, "BB", {{127, 0, 0, 1}, 6881}, 23)
@@ -82,8 +83,7 @@ defmodule RoutingTable.Worker.Test do
 
   test "if routing table size and cache size are equal with two elements" do
     name = :cache_test
-    {:ok, _registry} = RoutingTable.Worker.start_link(name)
-    RoutingTable.Worker.node_id(name, "AAAAAAAAAAAAAAAAAAAB")
+    {:ok, _registry} = RoutingTable.Worker.start_link(name: name, node_id: "AAAAAAAAAAAAAAAAAAAB")
 
     RoutingTable.Worker.add(name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
     RoutingTable.Worker.add(name, "CCCCCCCCCCCCCCCCCCCC", {{127, 0, 0, 1}, 6881}, 23)
@@ -93,7 +93,7 @@ defmodule RoutingTable.Worker.Test do
 
   test "if routing table size and cache size are equal with ten elements" do
     name = :cache_test
-    {:ok, _registry} = RoutingTable.Worker.start_link(name)
+    {:ok, _registry} = RoutingTable.Worker.start_link(name: name, node_id: "AAAAAAAAAAAAAAAAAAAB")
     RoutingTable.Worker.node_id(name, "AAAAAAAAAAAAAAAAAAAB")
 
     Enum.map(?B .. ?Z, fn(x) -> String.duplicate(<<x>>, 20) end)
@@ -112,8 +112,7 @@ defmodule RoutingTable.Worker.Test do
     name    = :closest_nodes
     node_id = "AAAAAAAAAAAAAAAAAAAB"
 
-    {:ok, _registry} = RoutingTable.Worker.start_link(name)
-    RoutingTable.Worker.node_id(name, "AAAAAAAAAAAAAAAAAAAB")
+    {:ok, _registry} = RoutingTable.Worker.start_link(name: name, node_id: "AAAAAAAAAAAAAAAAAAAB")
 
     ## Generate close node_ids
     close_nodes = 1 .. 16

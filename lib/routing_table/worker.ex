@@ -34,14 +34,19 @@ defmodule RoutingTable.Worker do
   # Public API #
   ##############
 
-  def start_link(name) do
-    GenServer.start_link(__MODULE__, ["AAAAAAAAAAAAAAAAAAAA"], name: name)
+  def start_link(opts) do
+    #TODO: pass rtable name
+    Logger.debug "Starting RoutingTable worker: #{inspect(opts)}"
+    init_args = [node_id: opts[:node_id], rt_name: opts[:rt_name]]
+    GenServer.start_link(__MODULE__,  init_args, opts)
   end
 
   def add(name, remote_node_id, address, socket) do
     GenServer.cast(name, {:add, remote_node_id, address, socket})
   end
 
+  #TODO: This function changes our node ID. This should not be necessary anymore as
+  # we set the node_id in the app
   def node_id(name, node_id) do
     GenServer.call(name, {:node_id, node_id})
   end
@@ -78,7 +83,7 @@ defmodule RoutingTable.Worker do
   # GenServer API #
   #################
 
-  def init([node_id]) do
+  def init(node_id: node_id, rt_name: rt_name) do
     ## Start timer for peer review
     Process.send_after(self(), :review, @review_time)
 
@@ -90,10 +95,12 @@ defmodule RoutingTable.Worker do
     Process.send_after(self(), :bucket_maintenance, @bucket_maintenance_time)
 
     ## Generate name of the ets cache table from the node_id as an atom
+    IO.inspect(node_id, label: "node_id")
     ets_name = node_id |> Base.encode16() |> String.to_atom()
 
     {:ok, %{
         node_id: node_id,
+        rt_name: rt_name,
         buckets: [Bucket.new(0)],
         cache:   :ets.new(ets_name, [:set, :protected]),
      }}
@@ -310,7 +317,13 @@ defmodule RoutingTable.Worker do
       ## If the bucket has still some space left, we can just add the node to
       ## the bucket. Easy Peasy
       Bucket.has_space?(bucket) ->
-        pid = Node.start_link(my_node_id, node_tuple)
+        #TODO: register nodes in a registry instead of storing the pid in a bucket.
+        # (the pid won't be the same after a process has been restarted by a supervisor)
+        # name = MlDHT.Registry.via(..)
+        node_id_enc   = Base.encode16 my_node_id
+        node_sup_name = node_id_enc  <> "_rtable_" <> state.rt_name <> "_nodes_dsup"
+        node_sup      = MlDHT.Registry.get_pid(node_sup_name)
+        {:ok, pid} = DynamicSupervisor.start_child(node_sup, {Node, [own_node_id: my_node_id, node_tuple: node_tuple]})
         new_bucket = Bucket.add(bucket, pid)
 
         :ets.insert(state.cache, {node_id, pid})
