@@ -6,8 +6,7 @@ defmodule RoutingTable.Node do
   require Logger
 
   def start_link(opts) do
-    {:ok, pid} = GenServer.start_link(__MODULE__, [opts[:own_node_id], opts[:node_tuple]])
-    pid # TODO: register name. The pid won't be the same after a supervisor-induced restart.
+    GenServer.start_link(__MODULE__, [opts[:own_node_id], opts[:node_tuple]])
   end
 
   @doc """

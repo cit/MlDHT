@@ -317,8 +317,13 @@ defmodule RoutingTable.Worker do
       ## If the bucket has still some space left, we can just add the node to
       ## the bucket. Easy Peasy
       Bucket.has_space?(bucket) ->
-        #TODO: start via Supervisor
-        pid = Node.start_link(own_node_id: my_node_id, node_tuple: node_tuple)
+        #TODO: register nodes in a registry instead of storing the pid in a bucket.
+        # (the pid won't be the same after a process has been restarted by a supervisor)
+        # name = MlDHT.Registry.via(..)
+        node_id_enc   = Base.encode16 my_node_id
+        node_sup_name = node_id_enc  <> "_rtable_" <> state.rt_name <> "_nodes_dsup"
+        node_sup      = MlDHT.Registry.get_pid(node_sup_name)
+        {:ok, pid} = DynamicSupervisor.start_child(node_sup, {Node, [own_node_id: my_node_id, node_tuple: node_tuple]})
         new_bucket = Bucket.add(bucket, pid)
 
         :ets.insert(state.cache, {node_id, pid})
