@@ -42,11 +42,6 @@ defmodule RoutingTable.Bucket do
     %{bucket | nodes: Enum.filter(bucket.nodes, func)}
   end
 
-
-  def node_exists?(bucket, node_id) do
-    Enum.any?(bucket.nodes, fn(node_pid) -> node_id == Node.id(node_pid) end)
-  end
-
   def get(bucket, node_id) do
     Enum.find(bucket.nodes, fn(node_pid) -> Node.id(node_pid) == node_id end)
   end

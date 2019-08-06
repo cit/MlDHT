@@ -25,7 +25,7 @@ defmodule RoutingTable.Search do
 
   # @spec start_link() :: atom
   def start_link(socket, node_id) do
-    tid  = KRPCProtocol.gen_tid
+    tid  = KRPCProtocol.gen_tid()
     name = tid_to_process_name(tid)
 
     GenServer.start_link(__MODULE__, [socket, node_id, tid], name: name)
