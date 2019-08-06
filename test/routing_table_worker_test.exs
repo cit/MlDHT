@@ -97,7 +97,7 @@ defmodule RoutingTable.Worker.Test do
     assert RoutingTable.Worker.size(@name) == RoutingTable.Worker.cache_size(@name)
   end
 
-  test "if routing table size and cache size are equal with ten elements", test_worker_context do
+  test "if routing table size and cache size are equal with ten elements" do
     Enum.map(?B .. ?Z, fn(x) -> String.duplicate(<<x>>, 20) end)
     |> Enum.each(fn(node_id) ->
       RoutingTable.Worker.add(@name, node_id, {{127, 0, 0, 1}, 6881}, 23)
