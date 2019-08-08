@@ -1,4 +1,4 @@
-defmodule RoutingTable.Worker do
+defmodule MlDHT.RoutingTable.Worker do
   @moduledoc false
 
   use GenServer
@@ -6,10 +6,10 @@ defmodule RoutingTable.Worker do
   require Logger
   require Bitwise
 
-  alias RoutingTable.Node,     as: Node
-  alias RoutingTable.Bucket,   as: Bucket
-  alias RoutingTable.Distance, as: Distance
-  alias RoutingTable.Search,   as: Search
+  alias MlDHT.RoutingTable.Node,     as: Node
+  alias MlDHT.RoutingTable.Bucket,   as: Bucket
+  alias MlDHT.RoutingTable.Distance, as: Distance
+  alias MlDHT.RoutingTable.Search,   as: Search
 
   #############
   # Constants #
@@ -152,8 +152,8 @@ defmodule RoutingTable.Worker do
         target = Distance.gen_node_id(152, state[:node_id])
         node    = Node.to_tuple(node_pid)
 
-        Search.start_link(Node.socket(node_pid), state[:node_id])
-        |> Search.find_node(target: target, start_nodes: [node])
+        # Search.start_link(Node.socket(node_pid), state[:node_id])
+        # |> Search.find_node(target: target, start_nodes: [node])
       nil ->
         Logger.info "Neighbourhood Maintenance: No nodes in our routing table."
     end
@@ -189,8 +189,8 @@ defmodule RoutingTable.Worker do
             Logger.info "Staring find_node search on bucket #{index}"
 
             ## Start find_node search
-            Search.start_link(Node.socket(node_pid), state.node_id)
-            |> Search.find_node(target: target, start_nodes: [node])
+            # Search.start_link(Node.socket(node_pid), state.node_id)
+            # |> Search.find_node(target: target, start_nodes: [node])
           nil ->
             Logger.warn "Bucket Maintenance: No nodes in our routing table."
         end

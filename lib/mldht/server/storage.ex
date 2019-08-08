@@ -1,4 +1,4 @@
-defmodule DHTServer.Storage do
+defmodule MlDHT.Server.Storage do
   @moduledoc false
 
   use GenServer

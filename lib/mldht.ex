@@ -2,7 +2,8 @@ defmodule MlDHT do
   use Application
 
   require Logger
-  alias DHTServer.Utils, as: Utils
+
+  alias MlDHT.Server.Utils, as: Utils
 
 
   @moduledoc ~S"""
@@ -47,16 +48,16 @@ defmodule MlDHT do
   start a get_peers search for the given infohash.
 
   ## Example
-      iex> "3F19B149F53A50E14FC0B79926A391896EABAB6F" ## Ubuntu 15.04
+      iex> "3F19B149F53A50E14FC0B79926A391896EABAB6F"
             |> Base.decode16!
             |> MlDHT.search(fn(node) ->
              {ip, port} = node
-             IO.puts "ip: #{inpsect ip} port: #{port}"
+             IO.puts "ip: #{inspect ip} port: #{port}"
            end)
   """
   @spec search(infohash, fun) :: atom
   def search(infohash, callback) do
-    DHTServer.Worker.search(DHTServer.Worker, infohash, callback)
+    MlDHT.Server.Worker.search(MlDHT.Server.Worker, infohash, callback)
   end
 
   @doc ~S"""
@@ -75,7 +76,7 @@ defmodule MlDHT do
   """
   @spec search_announce(infohash, fun) :: atom
   def search_announce(infohash, callback) do
-    DHTServer.Worker.search_announce(DHTServer.Worker, infohash, callback)
+    MlDHT.Server.Worker.search_announce(MlDHT.Server.Worker, infohash, callback)
   end
 
   @doc ~S"""
@@ -93,7 +94,7 @@ defmodule MlDHT do
   """
   @spec search_announce(infohash, fun, tcp_port) :: atom
   def search_announce(infohash, callback, port) do
-    DHTServer.Worker.search_announce(DHTServer.Worker, infohash, callback, port)
+    MlDHT.Server.Worker.search_announce(MlDHT.Server.Worker, infohash, callback, port)
   end
 
 end

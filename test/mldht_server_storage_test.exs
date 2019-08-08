@@ -1,8 +1,8 @@
-defmodule DHTServer.Storage.Test do
+defmodule MlDHT.Server.Storage.Test do
   use ExUnit.Case
   require Logger
 
-  alias DHTServer.Storage
+  alias MlDHT.Server.Storage
 
   test "has_nodes_for_infohash?" do
     Storage.put("aaaa", {127, 0, 0, 1}, 6881)

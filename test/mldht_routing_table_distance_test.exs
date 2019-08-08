@@ -1,7 +1,7 @@
-defmodule RoutingTable.Distance.Test do
+defmodule MlDHT.RoutingTable.Distance.Test do
   use ExUnit.Case
 
-  alias RoutingTable.Distance
+  alias MlDHT.RoutingTable.Distance
 
   test "gen_node_id" do
     node_id = String.duplicate("A", 20)

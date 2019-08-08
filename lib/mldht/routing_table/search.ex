@@ -1,4 +1,4 @@
-defmodule RoutingTable.Search do
+defmodule MlDHT.RoutingTable.Search do
   @moduledoc false
 
   @typedoc """
@@ -15,9 +15,9 @@ defmodule RoutingTable.Search do
 
   require Logger
 
-  alias RoutingTable.Distance
-  alias RoutingTable.Node
-  alias RoutingTable.Search
+  alias MlDHT.RoutingTable.Distance
+  alias MlDHT.RoutingTable.Node
+  alias MlDHT.RoutingTable.Search
 
   ##############
   # Client API #

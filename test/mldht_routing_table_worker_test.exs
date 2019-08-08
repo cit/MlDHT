@@ -1,4 +1,4 @@
-defmodule RoutingTable.Worker.Test do
+defmodule MlDHT.RoutingTable.Worker.Test do
   use ExUnit.Case
 
   @name :test
@@ -10,7 +10,7 @@ defmodule RoutingTable.Worker.Test do
     start_supervised!({DynamicSupervisor, name:
         MlDHT.Registry.via(node_id_enc   <> "_rtable_" <> rt_name <> "_nodes_dsup"),
         strategy: :one_for_one})
-    start_supervised!({RoutingTable.Worker, [name: @name, node_id: node_id, rt_name: rt_name]})
+    start_supervised!({MlDHT.RoutingTable.Worker, [name: @name, node_id: node_id, rt_name: rt_name]})
     [node_id: node_id,
       node_id_enc: node_id_enc,
       rt_name: rt_name,
@@ -24,20 +24,20 @@ defmodule RoutingTable.Worker.Test do
   # end
 
   test "If the size of the table is 0 if we add and delete a node" do
-    RoutingTable.Worker.add(@name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
-    assert RoutingTable.Worker.size(@name) == 1
+    MlDHT.RoutingTable.Worker.add(@name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
+    assert MlDHT.RoutingTable.Worker.size(@name) == 1
 
-    RoutingTable.Worker.del(@name, "BBBBBBBBBBBBBBBBBBBB")
-    assert RoutingTable.Worker.size(@name) == 0
+    MlDHT.RoutingTable.Worker.del(@name, "BBBBBBBBBBBBBBBBBBBB")
+    assert MlDHT.RoutingTable.Worker.size(@name) == 0
   end
 
   test "get_node" do
-    assert :ok == RoutingTable.Worker.add(@name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
+    assert :ok == MlDHT.RoutingTable.Worker.add(@name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
 
-    assert RoutingTable.Worker.get(@name, "BBBBBBBBBBBBBBBBBBBB") |> Kernel.is_pid == true
-    assert RoutingTable.Worker.get(@name, "CCCCCCCCCCCCCCCCCCCC") == nil
+    assert MlDHT.RoutingTable.Worker.get(@name, "BBBBBBBBBBBBBBBBBBBB") |> Kernel.is_pid == true
+    assert MlDHT.RoutingTable.Worker.get(@name, "CCCCCCCCCCCCCCCCCCCC") == nil
 
-    RoutingTable.Worker.del(@name, "BBBBBBBBBBBBBBBBBBBB")
+    MlDHT.RoutingTable.Worker.del(@name, "BBBBBBBBBBBBBBBBBBBB")
   end
 
   # test "foo" do
@@ -73,41 +73,41 @@ defmodule RoutingTable.Worker.Test do
   # end
 
   test "Double entries" do
-    RoutingTable.Worker.add(@name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
-    RoutingTable.Worker.add(@name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
+    MlDHT.RoutingTable.Worker.add(@name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
+    MlDHT.RoutingTable.Worker.add(@name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
 
-    assert RoutingTable.Worker.size(@name) == 1
-    RoutingTable.Worker.del(@name, "BBBBBBBBBBBBBBBBBBBB")
+    assert MlDHT.RoutingTable.Worker.size(@name) == 1
+    MlDHT.RoutingTable.Worker.del(@name, "BBBBBBBBBBBBBBBBBBBB")
   end
 
 
   test "if del() really deletes the node from the routing table" do
-    RoutingTable.Worker.add(@name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
-    node_pid = RoutingTable.Worker.get(@name, "BBBBBBBBBBBBBBBBBBBB")
+    MlDHT.RoutingTable.Worker.add(@name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
+    node_pid = MlDHT.RoutingTable.Worker.get(@name, "BBBBBBBBBBBBBBBBBBBB")
 
     assert Process.alive?(node_pid) == true
-    RoutingTable.Worker.del(@name, "BBBBBBBBBBBBBBBBBBBB")
+    MlDHT.RoutingTable.Worker.del(@name, "BBBBBBBBBBBBBBBBBBBB")
     assert Process.alive?(node_pid) == false
   end
 
   test "if routing table size and cache size are equal with two elements" do
-    RoutingTable.Worker.add(@name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
-    RoutingTable.Worker.add(@name, "CCCCCCCCCCCCCCCCCCCC", {{127, 0, 0, 1}, 6881}, 23)
+    MlDHT.RoutingTable.Worker.add(@name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
+    MlDHT.RoutingTable.Worker.add(@name, "CCCCCCCCCCCCCCCCCCCC", {{127, 0, 0, 1}, 6881}, 23)
 
-    assert RoutingTable.Worker.size(@name) == RoutingTable.Worker.cache_size(@name)
+    assert MlDHT.RoutingTable.Worker.size(@name) == MlDHT.RoutingTable.Worker.cache_size(@name)
   end
 
   test "if routing table size and cache size are equal with ten elements" do
     Enum.map(?B .. ?Z, fn(x) -> String.duplicate(<<x>>, 20) end)
     |> Enum.each(fn(node_id) ->
-      RoutingTable.Worker.add(@name, node_id, {{127, 0, 0, 1}, 6881}, 23)
+      MlDHT.RoutingTable.Worker.add(@name, node_id, {{127, 0, 0, 1}, 6881}, 23)
     end)
 
-    RoutingTable.Worker.del(@name, "BBBBBBBBBBBBBBBBBBBB")
-    RoutingTable.Worker.del(@name, "CCCCCCCCCCCCCCCCCCCC")
-    RoutingTable.Worker.del(@name, "DDDDDDDDDDDDDDDDDDDD")
+    MlDHT.RoutingTable.Worker.del(@name, "BBBBBBBBBBBBBBBBBBBB")
+    MlDHT.RoutingTable.Worker.del(@name, "CCCCCCCCCCCCCCCCCCCC")
+    MlDHT.RoutingTable.Worker.del(@name, "DDDDDDDDDDDDDDDDDDDD")
 
-    assert RoutingTable.Worker.size(@name) == RoutingTable.Worker.cache_size(@name)
+    assert MlDHT.RoutingTable.Worker.size(@name) == MlDHT.RoutingTable.Worker.cache_size(@name)
   end
 
   test "if closest_node() return only the closest nodes", test_worker_context do
@@ -115,7 +115,7 @@ defmodule RoutingTable.Worker.Test do
 
     ## Generate close node_ids
     close_nodes = 1 .. 16
-    |> Enum.map(fn(x) -> RoutingTable.Distance.gen_node_id(160-x, node_id) end)
+    |> Enum.map(fn(x) -> MlDHT.RoutingTable.Distance.gen_node_id(160-x, node_id) end)
     |> Enum.filter(fn(x) -> x != node_id end)
     |> Enum.uniq()
     |> Enum.slice(0 .. 7)
@@ -123,21 +123,21 @@ defmodule RoutingTable.Worker.Test do
 
     ## Add the close nodes to the RoutingTable
     Enum.each(close_nodes, fn(node) ->
-      RoutingTable.Worker.add(@name, node, {{127, 0, 0, 1}, 6881}, nil)
+      MlDHT.RoutingTable.Worker.add(@name, node, {{127, 0, 0, 1}, 6881}, nil)
     end)
 
-    assert RoutingTable.Worker.size(@name) == 8
+    assert MlDHT.RoutingTable.Worker.size(@name) == 8
 
     ## Generate and add distant nodes
     Enum.map(?B .. ?I, fn(x) -> String.duplicate(<<x>>, 20) end)
     |> Enum.each(fn(node_id) ->
-      RoutingTable.Worker.add(@name, node_id, {{127, 0, 0, 1}, 6881}, 23)
+      MlDHT.RoutingTable.Worker.add(@name, node_id, {{127, 0, 0, 1}, 6881}, 23)
     end)
 
-    assert RoutingTable.Worker.size(@name) == 16
+    assert MlDHT.RoutingTable.Worker.size(@name) == 16
 
-    list = RoutingTable.Worker.closest_nodes(@name, node_id)
-    |> Enum.map(fn(x) -> RoutingTable.Node.id(x)  end)
+    list = MlDHT.RoutingTable.Worker.closest_nodes(@name, node_id)
+    |> Enum.map(fn(x) -> MlDHT.RoutingTable.Node.id(x)  end)
     |> Enum.sort()
 
     ## list and close_nodes must be equal

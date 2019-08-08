@@ -1,7 +1,7 @@
-defmodule DHTServer.Utils.Test do
+defmodule MlDHT.Server.Utils.Test do
   use ExUnit.Case
 
-  alias DHTServer.Utils, as: Utils
+  alias MlDHT.Server.Utils, as: Utils
 
   test "IPv4 address with tuple_to_ipstr/2" do
     assert Utils.tuple_to_ipstr({127, 0, 0, 1}, 6881) == "127.0.0.1:6881"

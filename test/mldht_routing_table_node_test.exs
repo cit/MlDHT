@@ -1,4 +1,4 @@
-defmodule RoutingTableTest do
+defmodule MlDHT.RoutingTableTest do
   use ExUnit.Case
 
   test "the truth" do

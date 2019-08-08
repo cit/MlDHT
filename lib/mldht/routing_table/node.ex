@@ -1,4 +1,4 @@
-defmodule RoutingTable.Node do
+defmodule MlDHT.RoutingTable.Node do
   @moduledoc false
 
   use GenServer

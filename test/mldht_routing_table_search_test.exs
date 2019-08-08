@@ -1,7 +1,7 @@
-defmodule RoutingTable.Search.Test do
+defmodule MlDHT.RoutingTable.Search.Test do
   use ExUnit.Case
 
-  alias RoutingTable.Search
+  alias MlDHT.RoutingTable.Search
 
   test "tid_to_process_name" do
     assert Search.tid_to_process_name(<<183, 2>>)        == :search183_2

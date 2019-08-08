@@ -1,8 +1,8 @@
-defmodule RoutingTable.Bucket do
+defmodule MlDHT.RoutingTable.Bucket do
   @moduledoc false
 
-  alias RoutingTable.Bucket
-  alias RoutingTable.Node
+  alias MlDHT.RoutingTable.Bucket
+  alias MlDHT.RoutingTable.Node
 
   require Logger
 

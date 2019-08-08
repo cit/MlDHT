@@ -1,4 +1,4 @@
-defmodule RoutingTable.Supervisor do
+defmodule MlDHT.RoutingTable.Supervisor do
   use Supervisor
   require Logger
 
@@ -12,12 +12,12 @@ defmodule RoutingTable.Supervisor do
   end
 
   @impl true
-  def init(args) do 
+  def init(args) do
     node_id     = args[:node_id]
     node_id_enc = args[:node_id_enc]
     rt_name     = args[:rt_name]
     children = [
-      {RoutingTable.Worker, rt_name: rt_name,
+      {MlDHT.RoutingTable.Worker, rt_name: rt_name,
         node_id: node_id,
         name: MlDHT.Registry.via(node_id_enc <> "_rtable_" <> rt_name <> "_worker")},
       {DynamicSupervisor, name:

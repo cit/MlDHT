@@ -1,4 +1,4 @@
-defmodule DHTServer.Utils do
+defmodule MlDHT.Server.Utils do
   @moduledoc false
 
   @doc ~S"""
@@ -7,7 +7,7 @@ defmodule DHTServer.Utils do
   format: "127.0.0.1:6881".
 
     ## Example
-    iex> DHTServer.Utils.tuple_to_ipstr({127, 0, 0, 1}, 6881)
+    iex> MlDHT.Server.Utils.tuple_to_ipstr({127, 0, 0, 1}, 6881)
     "127.0.0.1:6881"
   """
   def tuple_to_ipstr({oct1, oct2, oct3, oct4}, port) do
@@ -28,7 +28,7 @@ defmodule DHTServer.Utils do
   This function gets an IPv4 address as binary and converts it to a tuple.
 
     ## Example
-    iex> DHTServer.Utils.ipstr_to_tuple("127.0.0.1")
+    iex> MlDHT.Server.Utils.ipstr_to_tuple("127.0.0.1")
     {127, 0, 0, 1}
   """
   def ipstr_to_tuple(ip_str) do

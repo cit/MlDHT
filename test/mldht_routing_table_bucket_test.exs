@@ -1,9 +1,9 @@
-defmodule RoutingTable.Bucket.Test do
+defmodule MlDHT.RoutingTable.Bucket.Test do
   use ExUnit.Case
 
   require Logger
 
-  alias RoutingTable.Bucket
+  alias MlDHT.RoutingTable.Bucket
 
   test "size function" do
     bucket = Bucket.new(0)

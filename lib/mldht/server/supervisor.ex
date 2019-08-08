@@ -19,10 +19,10 @@ defmodule MlDHT.Supervisor do
       {DynamicSupervisor,
         name: MlDHT.Registry.via(node_id_enc <> "_rtable_dsup"),
         strategy: :one_for_one},
-      {DHTServer.Worker,
+      {MlDHT.Server.Worker,
         node_id: node_id,
         name: MlDHT.Registry.via(node_id_enc <> "_worker")},
-      worker(DHTServer.Storage, []), # TODO: pass a name to Storage and allow multiple Storages (see Worker)
+      worker(MlDHT.Server.Storage, []), # TODO: pass a name to Storage and allow multiple Storages (see Worker)
     ]
 
     IO.inspect(children, label: "MlDHT.Supervisor children")
