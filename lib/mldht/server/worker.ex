@@ -402,11 +402,11 @@ defmodule MlDHT.Server.Worker do
   defp resolve_hostnames([node_tuple | tail], inet, result) do
     {id, host, port} = node_tuple
 
-    case :inet.getaddr(String.to_charlist(host), inet) do
+    case :inet.getaddr(String.to_charlist(host), :inet) do
       {:ok, ip_addr}  ->
         resolve_hostnames(tail, inet, result ++ [{id, ip_addr, port}])
-      {:error, _code} ->
-        Logger.error "Couldn't resolve the hostname: #{host}"
+      {:error, code} ->
+        Logger.error "Couldn't resolve the hostname: #{host} (reason: #{code})"
         resolve_hostnames(tail, inet, result)
     end
   end
