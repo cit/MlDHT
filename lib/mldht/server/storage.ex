@@ -13,8 +13,8 @@ defmodule MlDHT.Server.Storage do
   ## 30 Minutes
   @node_expired 60 * 30
 
-  def start_link do
-    GenServer.start_link(__MODULE__, [], name: @name)
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, [], opts)
   end
 
   def init([]) do
@@ -22,22 +22,23 @@ defmodule MlDHT.Server.Storage do
     {:ok, %{}}
   end
 
-  def put(infohash, ip, port) do
-    GenServer.cast(@name, {:put, infohash, ip, port})
+  def put(pid, infohash, ip, port) do
+    GenServer.cast(pid, {:put, infohash, ip, port})
   end
 
-  def print do
-    GenServer.cast(@name, :print)
+  def print(pid) do
+    GenServer.cast(pid, :print)
   end
 
 
-  def has_nodes_for_infohash?(infohash) do
-    GenServer.call(@name, {:has_nodes_for_infohash?, infohash})
+  def has_nodes_for_infohash?(pid, infohash) do
+    GenServer.call(pid, {:has_nodes_for_infohash?, infohash})
   end
 
-  def get_nodes(infohash) do
-    GenServer.call(@name, {:get_nodes, infohash})
+  def get_nodes(pid, infohash) do
+    GenServer.call(pid, {:get_nodes, infohash})
   end
+
 
   def handle_info(:review_storage, state) do
     Logger.debug "Review storage"

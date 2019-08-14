@@ -4,21 +4,39 @@ defmodule MlDHT.Server.Storage.Test do
 
   alias MlDHT.Server.Storage
 
-  test "has_nodes_for_infohash?" do
-    Storage.put("aaaa", {127, 0, 0, 1}, 6881)
+  setup do
+    rt_name = "test_rt"
+    node_id_enc = String.duplicate("A", 20) |> Base.encode16
+    pname = node_id_enc <> "_storage"
 
-    assert Storage.has_nodes_for_infohash?("bbbb") == false
-    assert Storage.has_nodes_for_infohash?("aaaa") == true
+    start_supervised!(
+      {DynamicSupervisor,
+       name: MlDHT.Registry.via(node_id_enc   <> "_rtable_" <> rt_name <> "_nodes_dsup"),
+       strategy: :one_for_one})
+
+    start_supervised!({MlDHT.Server.Storage, name: MlDHT.Registry.via(pname)})
+
+    [pid: MlDHT.Registry.get_pid(pname)]
   end
 
-  test "get_nodes" do
-    Storage.put("aaaa", {127, 0, 0, 1}, 6881)
-    Storage.put("aaaa", {127, 0, 0, 1}, 6881)
-    Storage.put("aaaa", {127, 0, 0, 2}, 6882)
+  test "has_nodes_for_infohash?", test_context do
+    pid = test_context.pid
+    Storage.put(pid, "aaaa", {127, 0, 0, 1}, 6881)
 
-    Storage.print
+    assert Storage.has_nodes_for_infohash?(pid, "bbbb") == false
+    assert Storage.has_nodes_for_infohash?(pid, "aaaa") == true
+  end
 
-    assert Storage.get_nodes("aaaa") == [{{127,0,0,1}, 6881}, {{127, 0, 0, 2}, 6882}]
+  test "get_nodes", test_context do
+    pid = test_context.pid
+
+    Storage.put(pid, "aaaa", {127, 0, 0, 1}, 6881)
+    Storage.put(pid, "aaaa", {127, 0, 0, 1}, 6881)
+    Storage.put(pid, "aaaa", {127, 0, 0, 2}, 6882)
+
+    Storage.print(pid)
+
+    assert Storage.get_nodes(pid, "aaaa") == [{{127,0,0,1}, 6881}, {{127, 0, 0, 2}, 6882}]
   end
 
 end

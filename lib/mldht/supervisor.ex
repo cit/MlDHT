@@ -15,14 +15,18 @@ defmodule MlDHT.Supervisor do
   @impl true
   def init({:ok, node_id}) do
     node_id_enc = Base.encode16 node_id
+
     children = [
       {DynamicSupervisor,
         name: MlDHT.Registry.via(node_id_enc <> "_rtable_dsup"),
         strategy: :one_for_one},
+
       {MlDHT.Server.Worker,
         node_id: node_id,
-        name: MlDHT.Registry.via(node_id_enc <> "_worker")},
-      worker(MlDHT.Server.Storage, []), # TODO: pass a name to Storage and allow multiple Storages (see Worker)
+       name: MlDHT.Registry.via(node_id_enc <> "_worker")},
+
+      {MlDHT.Server.Storage,
+       name: MlDHT.Registry.via(node_id_enc <> "_storage")},
     ]
 
     IO.inspect(children, label: "MlDHT.Supervisor children")
