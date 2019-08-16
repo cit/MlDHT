@@ -5,7 +5,6 @@ defmodule MlDHT do
 
   alias MlDHT.Server.Utils, as: Utils
 
-
   @moduledoc ~S"""
   MlDHT is an Elixir package that provides a Kademlia Distributed Hash Table
   (DHT) implementation according to [BitTorrent Enhancement Proposals (BEP)
@@ -14,21 +13,12 @@ defmodule MlDHT do
 
   """
 
-  @doc false
-  def start(_type, _args) do
-    MlDHT.Registry.start()
+  ## Constants
 
-    ## Generate a new node ID
-    node_id = Utils.gen_node_id()
-    Logger.debug "Node-ID: #{Base.encode16 node_id}"
+  @node_id     Utils.gen_node_id()
+  @node_id_enc Base.encode16(@node_id)
 
-    # start the main supervisor
-    MlDHT.Supervisor.start_link(node_id: node_id, name: {:via, Registry, {MlDHT.Registry, node_id <> "_sup"}})
-  end
-
-  #################################
-  # delegates
-  #################################
+  ## Types
 
   @typedoc """
   A binary which contains the infohash of a torrent. An infohash is a SHA1
@@ -36,10 +26,54 @@ defmodule MlDHT do
   """
   @type infohash :: binary
 
+
   @typedoc """
   A non negative integer (0--65565) which represents a TCP port number.
   """
-  @type tcp_port :: non_neg_integer
+  @type tcp_port :: 0..65565
+
+
+  @typedoc """
+  TODO
+  """
+  @type node_id :: <<_::20>>
+
+
+  @typedoc """
+  TODO
+  """
+  @type node_id_enc :: String.t()
+
+
+
+  @doc false
+  def start(_type, _args) do
+    MlDHT.Registry.start()
+
+    ## Generate a new node ID
+    Logger.debug "Node-ID: #{@node_id_enc}"
+
+    ## Start the main supervisor
+    MlDHT.Supervisor.start_link(
+      node_id: @node_id,
+      name:    {:via, Registry, {MlDHT.Registry, @node_id <> "_sup"}}
+    )
+  end
+
+  @doc ~S"""
+  This function returns the generated node_id as a bitstring.
+  """
+  @spec node_id() :: node_id
+  def node_id, do: @node_id
+
+
+  @doc ~S"""
+  This function returns the generated node_id encoded as a String (40
+  characters).
+  """
+  @spec node_id_enc() :: node_id_enc
+  def node_id_enc, do: @node_id_enc
+
 
 
   @doc ~S"""
@@ -57,8 +91,11 @@ defmodule MlDHT do
   """
   @spec search(infohash, fun) :: atom
   def search(infohash, callback) do
-    MlDHT.Server.Worker.search(MlDHT.Server.Worker, infohash, callback)
+    pid = @node_id_enc |> Kernel.<>("_worker") |> MlDHT.Registry.get_pid()
+    MlDHT.Server.Worker.search(pid, infohash, callback)
   end
+
+
 
   @doc ~S"""
   This function needs an infohash as binary and callback function as
@@ -67,7 +104,7 @@ defmodule MlDHT do
   TCP port which means the announce message sets `:implied_port` to true.
 
   ## Example
-      iex> "3F19B149F53A50E14FC0B79926A391896EABAB6F" ## Ubuntu 15.04
+      iex> "3F19B149F53A50E14FC0B79926A391896EABAB6F"
            |> Base.decode16!
            |> MlDHT.search_announce(fn(node) ->
              {ip, port} = node
@@ -76,8 +113,11 @@ defmodule MlDHT do
   """
   @spec search_announce(infohash, fun) :: atom
   def search_announce(infohash, callback) do
-    MlDHT.Server.Worker.search_announce(MlDHT.Server.Worker, infohash, callback)
+    pid = @node_id_enc |> Kernel.<>("_worker") |> MlDHT.Registry.get_pid()
+    MlDHT.Server.Worker.search_announce(pid, infohash, callback)
   end
+
+
 
   @doc ~S"""
   This function needs an infohash as binary, a callback function as parameter,
@@ -94,7 +134,8 @@ defmodule MlDHT do
   """
   @spec search_announce(infohash, fun, tcp_port) :: atom
   def search_announce(infohash, callback, port) do
-    MlDHT.Server.Worker.search_announce(MlDHT.Server.Worker, infohash, callback, port)
+    pid = @node_id_enc |> Kernel.<>("_worker") |> MlDHT.Registry.get_pid()
+    MlDHT.Server.Worker.search_announce(pid, infohash, callback, port)
   end
 
 end

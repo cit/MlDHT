@@ -242,7 +242,7 @@ defmodule MlDHT.Server.Worker do
       Logger.debug "NODES ARGS: #{inspect args}"
       payload = KRPCProtocol.encode(:find_node_reply, args)
 
-      Logger.debug(PrettyHex.pretty_hex(to_string(payload)))
+      # Logger.debug(PrettyHex.pretty_hex(to_string(payload)))
 
       :gen_udp.send(socket, ip, port, payload)
     end
