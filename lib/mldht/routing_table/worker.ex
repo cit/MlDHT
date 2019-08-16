@@ -376,7 +376,7 @@ defmodule MlDHT.RoutingTable.Worker do
     try do
       cache |> :ets.tab2list() |> Enum.random() |> elem(1)
     rescue
-      _e in RuntimeError -> nil
+      _e in Enum.EmptyError -> nil
     end
   end
 
