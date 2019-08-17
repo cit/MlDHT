@@ -151,7 +151,6 @@ defmodule MlDHT.Server.Worker do
   end
 
   def handle_cast({:search, infohash, callback}, state) do
-    Logger.error "new search"
     nodes = MlDHT.RoutingTable.Worker.closest_nodes(get_rtable(state.node_id, :ipv4), infohash)
 
     Search.start_link(state.socket, state.node_id)
