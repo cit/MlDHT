@@ -56,7 +56,7 @@ defmodule MlDHT do
     ## Start the main supervisor
     MlDHT.Supervisor.start_link(
       node_id: @node_id,
-      name:    {:via, Registry, {MlDHT.Registry, @node_id <> "_sup"}}
+      name:    MlDHT.Registry.via(@node_id_enc, MlDHT.Supervisor)
     )
   end
 

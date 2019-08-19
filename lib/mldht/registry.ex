@@ -1,4 +1,5 @@
 defmodule MlDHT.Registry do
+  require Logger
 
   @moduledoc ~S"""
   This module just capsules functions that avoid boilerplate when using the
@@ -20,8 +21,8 @@ defmodule MlDHT.Registry do
     case Registry.lookup(MlDHT.Registry, name) do
       [{pid, _}] -> pid
       e ->
+        Logger.error "Could not find Process with name #{name} in MlDHT.Registry"
         require IEx; IEx.pry
-        raise "Could not find Process with name #{inspect(e)} in MlDHT.Registry"
     end
   end
   def get_pid(node_id_enc, module), do: id(node_id_enc, module) |> get_pid()

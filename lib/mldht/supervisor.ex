@@ -14,7 +14,7 @@ defmodule MlDHT.Supervisor do
 
   @impl true
   def init({:ok, node_id}) do
-    node_id_enc = MlDHT.node_id_enc()
+    node_id_enc = node_id |> Base.encode16()
 
     children = [
       {DynamicSupervisor,
