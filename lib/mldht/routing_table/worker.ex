@@ -35,7 +35,7 @@ defmodule MlDHT.RoutingTable.Worker do
   ##############
 
   def start_link(opts) do
-    #TODO: pass rtable name
+    # TODO: pass rtable name
     Logger.debug "Starting RoutingTable worker: #{inspect(opts)}"
     init_args = [node_id: opts[:node_id], rt_name: opts[:rt_name]]
     GenServer.start_link(__MODULE__,  init_args, opts)
@@ -45,7 +45,7 @@ defmodule MlDHT.RoutingTable.Worker do
     GenServer.cast(name, {:add, remote_node_id, address, socket})
   end
 
-  #TODO: This function changes our node ID. This should not be necessary anymore as
+  # TODO: This function changes our node ID. This should not be necessary anymore as
   # we set the node_id in the app
   def node_id(name, node_id) do
     GenServer.call(name, {:node_id, node_id})
@@ -152,8 +152,8 @@ defmodule MlDHT.RoutingTable.Worker do
         target = Distance.gen_node_id(152, state[:node_id])
         node    = Node.to_tuple(node_pid)
 
-        # Search.start_link(Node.socket(node_pid), state[:node_id])
-        # |> Search.find_node(target: target, start_nodes: [node])
+        Search.start_link(Node.socket(node_pid), state[:node_id])
+        |> Search.find_node(target: target, start_nodes: [node])
       nil ->
         Logger.info "Neighbourhood Maintenance: No nodes in our routing table."
     end
@@ -189,8 +189,8 @@ defmodule MlDHT.RoutingTable.Worker do
             Logger.info "Staring find_node search on bucket #{index}"
 
             ## Start find_node search
-            # Search.start_link(Node.socket(node_pid), state.node_id)
-            # |> Search.find_node(target: target, start_nodes: [node])
+            Search.start_link(Node.socket(node_pid), state.node_id)
+            |> Search.find_node(target: target, start_nodes: [node])
           nil ->
             Logger.warn "Bucket Maintenance: No nodes in our routing table."
         end
@@ -317,13 +317,17 @@ defmodule MlDHT.RoutingTable.Worker do
       ## If the bucket has still some space left, we can just add the node to
       ## the bucket. Easy Peasy
       Bucket.has_space?(bucket) ->
-        #TODO: register nodes in a registry instead of storing the pid in a bucket.
+        # TODO: register nodes in a registry instead of storing the pid in a bucket.
         # (the pid won't be the same after a process has been restarted by a supervisor)
         # name = MlDHT.Registry.via(..)
-        node_id_enc   = Base.encode16 my_node_id
-        node_sup_name = node_id_enc  <> "_rtable_" <> state.rt_name <> "_nodes_dsup"
-        node_sup      = MlDHT.Registry.get_pid(node_sup_name)
-        {:ok, pid} = DynamicSupervisor.start_child(node_sup, {Node, [own_node_id: my_node_id, node_tuple: node_tuple]})
+
+        node_child = {Node, own_node_id: my_node_id, node_tuple: node_tuple}
+
+        {:ok, pid} = my_node_id
+        |> Base.encode16()
+        |> MlDHT.Registry.get_pid(MlDHT.RoutingTable.NodeSupervisor, state.rt_name)
+        |> DynamicSupervisor.start_child(node_child)
+
         new_bucket = Bucket.add(bucket, pid)
 
         :ets.insert(state.cache, {node_id, pid})

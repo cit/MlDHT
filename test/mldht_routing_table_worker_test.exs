@@ -7,14 +7,19 @@ defmodule MlDHT.RoutingTable.Worker.Test do
     rt_name = "test_rt"
     node_id =  "AAAAAAAAAAAAAAAAAAAB"
     node_id_enc = Base.encode16(node_id)
-    start_supervised!({DynamicSupervisor, name:
-        MlDHT.Registry.via(node_id_enc   <> "_rtable_" <> rt_name <> "_nodes_dsup"),
-        strategy: :one_for_one})
-    start_supervised!({MlDHT.RoutingTable.Worker, [name: @name, node_id: node_id, rt_name: rt_name]})
-    [node_id: node_id,
-      node_id_enc: node_id_enc,
-      rt_name: rt_name,
-    ]
+
+    start_supervised!({
+      DynamicSupervisor,
+      name: MlDHT.Registry.via(node_id_enc, MlDHT.RoutingTable.NodeSupervisor, rt_name),
+      strategy: :one_for_one})
+
+    start_supervised!({
+      MlDHT.RoutingTable.Worker,
+      name:    @name,
+      node_id: node_id,
+      rt_name: rt_name})
+
+    [node_id: node_id, node_id_enc: node_id_enc, rt_name: rt_name]
   end
 
   # INFO: This function is deprecated

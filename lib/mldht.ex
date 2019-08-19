@@ -91,7 +91,7 @@ defmodule MlDHT do
   """
   @spec search(infohash, fun) :: atom
   def search(infohash, callback) do
-    pid = @node_id_enc |> Kernel.<>("_worker") |> MlDHT.Registry.get_pid()
+    pid = @node_id_enc |> MlDHT.Registry.get_pid(MlDHT.Server.Worker)
     MlDHT.Server.Worker.search(pid, infohash, callback)
   end
 
@@ -113,7 +113,7 @@ defmodule MlDHT do
   """
   @spec search_announce(infohash, fun) :: atom
   def search_announce(infohash, callback) do
-    pid = @node_id_enc |> Kernel.<>("_worker") |> MlDHT.Registry.get_pid()
+    pid = @node_id_enc |> MlDHT.Registry.get_pid(MlDHT.Server.Worker)
     MlDHT.Server.Worker.search_announce(pid, infohash, callback)
   end
 
@@ -134,7 +134,7 @@ defmodule MlDHT do
   """
   @spec search_announce(infohash, fun, tcp_port) :: atom
   def search_announce(infohash, callback, port) do
-    pid = @node_id_enc |> Kernel.<>("_worker") |> MlDHT.Registry.get_pid()
+    pid = @node_id_enc |> MlDHT.Registry.get_pid(MlDHT.Server.Worker)
     MlDHT.Server.Worker.search_announce(pid, infohash, callback, port)
   end
 

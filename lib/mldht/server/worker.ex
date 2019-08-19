@@ -5,8 +5,9 @@ defmodule MlDHT.Server.Worker do
 
   require Logger
 
-  alias MlDHT.Server.Utils,        as: Utils
-  alias MlDHT.Server.Storage,      as: Storage
+  alias MlDHT.Server.Utils
+  alias MlDHT.Server.Storage
+  alias MlDHT.Registry
 
   alias MlDHT.RoutingTable.Node,   as: Node
   alias MlDHT.RoutingTable.Search, as: Search
@@ -26,8 +27,8 @@ defmodule MlDHT.Server.Worker do
   ## Example
       iex> MlDHT.DHTServer.Worker.bootstrap
   """
-  def bootstrap(worker_pid) do
-    GenServer.cast(worker_pid, :bootstrap)
+  def bootstrap(pid) do
+    GenServer.cast(pid, :bootstrap)
   end
 
 
@@ -43,16 +44,16 @@ defmodule MlDHT.Server.Worker do
              IO.puts "ip: #{ip} port: #{port}"
            end)
   """
-  def search(worker_pid, infohash, callback) do
-    GenServer.cast(worker_pid, {:search, infohash, callback})
+  def search(pid, infohash, callback) do
+    GenServer.cast(pid, {:search, infohash, callback})
   end
 
-  def search_announce(worker_pid, infohash, callback) do
-    GenServer.cast(worker_pid, {:search_announce, infohash, callback})
+  def search_announce(pid, infohash, callback) do
+    GenServer.cast(pid, {:search_announce, infohash, callback})
   end
 
-  def search_announce(worker_pid, infohash, port, callback) do
-    GenServer.cast(worker_pid, {:search_announce, infohash, port, callback})
+  def search_announce(pid, infohash, port, callback) do
+    GenServer.cast(pid, {:search_announce, infohash, port, callback})
   end
 
 
@@ -93,17 +94,21 @@ defmodule MlDHT.Server.Worker do
     state = %{node_id: node_id, socket: socket, socket6: socket6, old_secret:
               nil, secret: Utils.gen_secret}
 
-    ## Setup routingtable for IPv4
+    # INFO Setup routingtable for IPv4
     if cfg_ipv4_is_enabled? do
-      start_rtable(node_id, :ipv4)
-      MlDHT.RoutingTable.Worker.node_id(get_rtable(node_id, :ipv4), node_id)
+      node_id
+      |> start_rtable(:ipv4)
+      |> MlDHT.RoutingTable.Worker.node_id(node_id)
+
       bootstrap(state, {socket, :inet})
     end
 
-    ## Setup routingtable for IPv6
+    # INFO Setup routingtable for IPv6
     if cfg_ipv6_is_enabled? do
-      start_rtable(node_id, :ipv6)
-      MlDHT.RoutingTable.Worker.node_id(get_rtable(node_id, :ipv6), node_id)
+      node_id
+      |> start_rtable(:ipv6)
+      |> MlDHT.RoutingTable.Worker.node_id(node_id)
+
       bootstrap(state, {socket6, :inet6})
     end
 
@@ -111,18 +116,25 @@ defmodule MlDHT.Server.Worker do
   end
 
   defp start_rtable(node_id, rt_name) do
-    node_id_enc = Base.encode16 node_id
+    node_id_enc = node_id |> Base.encode16()
     rt_name = to_string(rt_name)
 
     ## Allows giving atoms as rt_name to this function, e.g. :ipv4
-    DynamicSupervisor.start_child(
-      MlDHT.Registry.get_pid(node_id_enc <> "_rtable_dsup"),
-      {MlDHT.RoutingTable.Supervisor, node_id: node_id, node_id_enc: node_id_enc, rt_name: rt_name})
+    {:ok, _pid} = node_id_enc
+    |> MlDHT.Registry.get_pid(MlDHT.RoutingTable.Supervisor)
+    |> DynamicSupervisor.start_child({
+      MlDHT.RoutingTable.Supervisor,
+      node_id:     node_id,
+      node_id_enc: node_id_enc,
+      rt_name:     rt_name})
+
+    node_id |> get_rtable(rt_name)
   end
 
   defp get_rtable(node_id, rt_name) do
-    node_id_enc = Base.encode16 node_id
-    MlDHT.Registry.get_pid(node_id_enc <> "_rtable_" <> to_string(rt_name) <> "_worker")
+    node_id
+    |> Base.encode16()
+    |> MlDHT.Registry.get_pid(MlDHT.RoutingTable.Worker, rt_name)
   end
 
   def handle_cast({:bootstrap, socket_tuple}, state) do
@@ -131,7 +143,10 @@ defmodule MlDHT.Server.Worker do
   end
 
   def handle_cast({:search_announce, infohash, callback}, state) do
-    nodes = MlDHT.RoutingTable.Worker.closest_nodes(get_rtable(state.node_id, :ipv4), infohash)
+    # TODO What about ipv6?
+    nodes = state.node_id
+    |> get_rtable(:ipv4)
+    |> MlDHT.RoutingTable.Worker.closest_nodes(infohash)
 
     Search.start_link(state.socket, state.node_id)
     |> Search.get_peers(target: infohash, start_nodes: nodes,
@@ -141,7 +156,9 @@ defmodule MlDHT.Server.Worker do
   end
 
   def handle_cast({:search_announce, infohash, callback, port}, state) do
-    nodes = MlDHT.RoutingTable.Worker.closest_nodes(get_rtable(state.node_id, :ipv4), infohash)
+    nodes = state.node_id
+    |> get_rtable(:ipv4)
+    |> MlDHT.RoutingTable.Worker.closest_nodes(infohash)
 
     Search.start_link(state.socket, state.node_id)
     |> Search.get_peers(target: infohash, start_nodes: nodes,
@@ -151,7 +168,9 @@ defmodule MlDHT.Server.Worker do
   end
 
   def handle_cast({:search, infohash, callback}, state) do
-    nodes = MlDHT.RoutingTable.Worker.closest_nodes(get_rtable(state.node_id, :ipv4), infohash)
+    nodes = state.node_id
+    |> get_rtable(:ipv4)
+    |> MlDHT.RoutingTable.Worker.closest_nodes(infohash)
 
     Search.start_link(state.socket, state.node_id)
     |> Search.get_peers(target: infohash, start_nodes: nodes, port: 0,
@@ -260,10 +279,7 @@ defmodule MlDHT.Server.Worker do
     token = :crypto.hash(:sha, Utils.tuple_to_ipstr(ip, port) <> state.secret)
 
     ## Get pid of the storage genserver
-    storage_pid = state.node_id
-    |> Base.encode16()
-    |> Kernel.<>("_storage")
-    |> MlDHT.Registry.get_pid()
+    storage_pid = state.node_id |> Base.encode16() |> Registry.get_pid(Storage)
 
     args =
     if Storage.has_nodes_for_infohash?(storage_pid, remote.info_hash) do
@@ -271,7 +287,7 @@ defmodule MlDHT.Server.Worker do
       [node_id: state.node_id, values: values, tid: remote.tid, token: token]
     else
       ## Get the closest nodes for the requested info_hash
-      rtable = get_rtable(state.node_id, ip_vers)
+      rtable = state.node_id |> get_rtable(ip_vers)
       nodes = Enum.map(MlDHT.RoutingTable.Worker.closest_nodes(rtable, remote.info_hash), fn(pid) ->
         Node.to_tuple(pid)
       end)
@@ -298,10 +314,7 @@ defmodule MlDHT.Server.Worker do
       port = if Map.has_key?(remote, :implied_port) do port else remote.port end
 
       ## Get pid of the storage genserver
-      storage_pid = state.node_id
-      |> Base.encode16()
-      |> Kernel.<>("_storage")
-      |> MlDHT.Registry.get_pid()
+      storage_pid = state.node_id |> Base.encode16() |> Registry.get_pid(Storage)
 
       Storage.put(storage_pid, remote.info_hash, ip, port)
 
@@ -430,7 +443,8 @@ defmodule MlDHT.Server.Worker do
 
   defp query_received(remote_node_id, own_node_id, ip_port, {socket, ip_vers}) do
     # TODO: node_id is not the own but the peer's node_id
-    rtable = get_rtable(own_node_id, ip_vers)
+    rtable = own_node_id |> get_rtable(ip_vers)
+
     if node_pid = MlDHT.RoutingTable.Worker.get(rtable, remote_node_id) do
       Node.update(node_pid, :last_query_rcv)
     else
@@ -440,7 +454,7 @@ defmodule MlDHT.Server.Worker do
 
   defp response_received(remote_node_id, own_node_id, ip_port, {socket, ip_vers}) do
     # TODO: node_id is not the own but the peer's node_id
-    rtable = get_rtable(own_node_id, ip_vers)
+    rtable = own_node_id |> get_rtable(ip_vers)
     if node_pid = MlDHT.RoutingTable.Worker.get(rtable, remote_node_id) do
       Node.update(node_pid, :last_response_rcv)
     else
