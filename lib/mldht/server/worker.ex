@@ -58,7 +58,8 @@ defmodule MlDHT.Server.Worker do
 
 
   def create_udp_socket(port, ip_vers) do
-    options = if ip_vers == :ipv4, do: [:inet], else: [:inet6, {:ipv6_v6only, true}]
+    ip_addr = ip_vers |> to_string() |> Kernel.<>("_addr") |> String.to_atom()
+    options = ip_vers |> inet_option() |> maybe_put(:ip, config(ip_addr))
 
     case :gen_udp.open(port, options ++ [{:active, true}]) do
       {:ok, socket} ->
@@ -77,14 +78,14 @@ defmodule MlDHT.Server.Worker do
     ## Returns false in case the option is not set in the environment (setting
     ## the option to false or not setting the option at all has the same effect
     ## in this case)
-    cfg_ipv6_is_enabled? = Application.get_env(:mldht, :ipv6, false)
-    cfg_ipv4_is_enabled? = Application.get_env(:mldht, :ipv4, false)
+    cfg_ipv6_is_enabled? = config(:ipv6, false)
+    cfg_ipv4_is_enabled? = config(:ipv4, false)
 
     unless cfg_ipv4_is_enabled? or cfg_ipv6_is_enabled? do
       raise "Configuration failure: Either ipv4 or ipv6 has to be set to true."
     end
 
-    cfg_port = Application.get_env(:mldht, :port)
+    cfg_port = config(:port)
     socket   = if cfg_ipv4_is_enabled?, do: create_udp_socket(cfg_port, :ipv4), else: nil
     socket6  = if cfg_ipv6_is_enabled?, do: create_udp_socket(cfg_port, :ipv6), else: nil
 
@@ -392,11 +393,19 @@ defmodule MlDHT.Server.Worker do
   # Private Functions #
   #####################
 
+  def inet_option(:ipv4), do: [:inet]
+  def inet_option(:ipv6), do: [:inet6, {:ipv6_v6only, true}]
+
+  def maybe_put(list, name, nil), do: list
+  def maybe_put(list, name, value), do: list ++ [{name, value}]
+
+  def config(value, ret \\ nil), do: Application.get_env(:mldht, value, ret)
+
   ## This function starts a search with the bootstrapping nodes.
   defp bootstrap(state, {socket, inet}) do
 
     ## Get the nodes which are defined as bootstrapping nodes in the config
-    nodes = Application.get_env(:mldht, :bootstrap_nodes)
+    nodes = config(:bootstrap_nodes)
     |> resolve_hostnames(inet)
 
     Logger.debug "nodes: #{inspect nodes}"
