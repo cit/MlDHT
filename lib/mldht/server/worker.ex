@@ -420,9 +420,10 @@ defmodule MlDHT.Server.Worker do
   ## removes it; if is resolvable it replaces the hostname with the IP address.
   defp resolve_hostnames(list, inet), do: resolve_hostnames(list, inet, [])
   defp resolve_hostnames([], _inet, result), do: result
-  defp resolve_hostnames([node_tuple | tail], inet, result) do
-    {id, host, port} = node_tuple
-
+  defp resolve_hostnames([{id, host, port} | tail], inet, result) when is_tuple(host) do
+    resolve_hostnames(tail, inet, result ++ [{id, host, port}])
+  end
+  defp resolve_hostnames([{id, host, port} | tail], inet, result) when is_binary(host) do
     case :inet.getaddr(String.to_charlist(host), :inet) do
       {:ok, ip_addr}  ->
         resolve_hostnames(tail, inet, result ++ [{id, ip_addr, port}])
