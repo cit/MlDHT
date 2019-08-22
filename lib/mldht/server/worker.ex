@@ -393,13 +393,13 @@ defmodule MlDHT.Server.Worker do
   # Private Functions #
   #####################
 
-  def inet_option(:ipv4), do: [:inet]
-  def inet_option(:ipv6), do: [:inet6, {:ipv6_v6only, true}]
+  defp inet_option(:ipv4), do: [:inet]
+  defp inet_option(:ipv6), do: [:inet6, {:ipv6_v6only, true}]
 
-  def maybe_put(list, name, nil), do: list
-  def maybe_put(list, name, value), do: list ++ [{name, value}]
+  defp maybe_put(list, name, nil), do: list
+  defp maybe_put(list, name, value), do: list ++ [{name, value}]
 
-  def config(value, ret \\ nil), do: Application.get_env(:mldht, value, ret)
+  defp config(value, ret \\ nil), do: Application.get_env(:mldht, value, ret)
 
   ## This function starts a search with the bootstrapping nodes.
   defp bootstrap(state, {socket, inet}) do
