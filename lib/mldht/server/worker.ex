@@ -97,20 +97,20 @@ defmodule MlDHT.Server.Worker do
 
     # INFO Setup routingtable for IPv4
     if cfg_ipv4_is_enabled? do
-      node_id
-      |> start_rtable(:ipv4)
-      |> MlDHT.RoutingTable.Worker.node_id(node_id)
+      start_rtable(node_id, :ipv4)
 
-      bootstrap(state, {socket, :inet})
+      if config(:bootstrap_nodes) do
+        bootstrap(state, {socket, :inet})
+      end
     end
 
     # INFO Setup routingtable for IPv6
     if cfg_ipv6_is_enabled? do
-      node_id
-      |> start_rtable(:ipv6)
-      |> MlDHT.RoutingTable.Worker.node_id(node_id)
+      start_rtable(node_id, :ipv6)
 
-      bootstrap(state, {socket6, :inet6})
+      if config(:bootstrap_nodes) do
+        bootstrap(state, {socket6, :inet6})
+      end
     end
 
     {:ok, state}
