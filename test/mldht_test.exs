@@ -1,12 +1,6 @@
 defmodule MlDHT.Test do
   use ExUnit.Case
 
-  defmodule TestCallerBacker do
-    def run(_node) do
-      send :test, {:called_back, :foo}
-    end
-  end
-
   test "if node_id() returns a String that has a length of 20 characters" do
     node_id = MlDHT.node_id()
     assert byte_size(node_id) == 20
@@ -18,7 +12,7 @@ defmodule MlDHT.Test do
   end
 
   test "if MlDHT.search" do
-    Process.register self(), :test
+    Process.register self(), :mldht_test_search
 
     ## Wait 3 seconds to ensure that the bootstrapping process has collected
     ## enough nodes
@@ -26,9 +20,11 @@ defmodule MlDHT.Test do
 
     "D540FC48EB12F2833163EED6421D449DD8F1CE1F"
     |> Base.decode16!
-    |> MlDHT.search(&TestCallerBacker.run/1)
+    |> MlDHT.search(fn (_node) ->
+      send :mldht_test_search, {:called_back, :pong}
+    end)
 
-    assert_receive {:called_back, :foo}, 40_000
+    assert_receive {:called_back, :pong}, 40_000
   end
 
 end
