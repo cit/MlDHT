@@ -179,7 +179,7 @@ defmodule MlDHT.RoutingTable.Worker do
     |> Stream.with_index
     |> Enum.map(fn({bucket, index}) ->
       if Bucket.age(bucket) >= @bucket_max_idle_time and Bucket.size(bucket) < 6 do
-        case random_node(state.buckets) do
+        case random_node(state.cache) do
           node_pid when is_pid(node_pid) ->
             node = Node.to_tuple(node_pid)
 
