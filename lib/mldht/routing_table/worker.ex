@@ -6,10 +6,11 @@ defmodule MlDHT.RoutingTable.Worker do
   require Logger
   require Bitwise
 
-  alias MlDHT.RoutingTable.Node,     as: Node
-  alias MlDHT.RoutingTable.Bucket,   as: Bucket
-  alias MlDHT.RoutingTable.Distance, as: Distance
-  alias MlDHT.RoutingTable.Search,   as: Search
+  alias MlDHT.RoutingTable.Node
+  alias MlDHT.RoutingTable.Bucket
+  alias MlDHT.RoutingTable.Distance
+
+  alias MlDHT.Search.Worker, as: Search
 
   #############
   # Constants #
@@ -22,7 +23,7 @@ defmodule MlDHT.RoutingTable.Worker do
   @response_time 60 * 5 * 1000
 
   ## 30 seconds
-  @neighbourhood_maintenance_time 30 * 1000
+  @neighbourhood_maintenance_time 5* 60 * 1000
 
   ## 3 minutes
   @bucket_maintenance_time 60 * 3 * 1000
@@ -99,10 +100,11 @@ defmodule MlDHT.RoutingTable.Worker do
     ets_name = node_id |> Base.encode16() |> String.to_atom()
 
     {:ok, %{
-        node_id: node_id,
-        rt_name: rt_name,
-        buckets: [Bucket.new(0)],
-        cache:   :ets.new(ets_name, [:set, :protected]),
+        node_id:     node_id,
+        node_id_enc: Base.encode16(node_id),
+        rt_name:     rt_name,
+        buckets:     [Bucket.new(0)],
+        cache:       :ets.new(ets_name, [:set, :protected]),
      }}
   end
 
@@ -152,8 +154,11 @@ defmodule MlDHT.RoutingTable.Worker do
         target = Distance.gen_node_id(152, state[:node_id])
         node    = Node.to_tuple(node_pid)
 
-        Search.start_link(Node.socket(node_pid), state[:node_id])
+        state.node_id_enc
+        |> MlDHT.Registry.get_pid(MlDHT.Search.Supervisor)
+        |> MlDHT.Search.Supervisor.start_child(:find_node, Node.socket(node_pid), state.node_id)
         |> Search.find_node(target: target, start_nodes: [node])
+
       nil ->
         Logger.info "Neighbourhood Maintenance: No nodes in our routing table."
     end
@@ -185,12 +190,15 @@ defmodule MlDHT.RoutingTable.Worker do
 
             ## Generate a random node_id based on the bucket
             target = Distance.gen_node_id(index, state.node_id)
-
+            socket = Node.socket(node_pid)
             Logger.info "Staring find_node search on bucket #{index}"
 
             ## Start find_node search
-            Search.start_link(Node.socket(node_pid), state.node_id)
+            state.node_id_enc
+            |> MlDHT.Registry.get_pid(MlDHT.Search.Supervisor)
+            |> MlDHT.Search.Supervisor.start_child(:find_node, socket, state.node_id)
             |> Search.find_node(target: target, start_nodes: [node])
+
           nil ->
             Logger.warn "Bucket Maintenance: No nodes in our routing table."
         end
@@ -257,9 +265,8 @@ defmodule MlDHT.RoutingTable.Worker do
   end
 
   def handle_call({:node_id, node_id}, _from, state) do
-
     ## Generate new name of the ets cache table and rename it
-    ets_name = node_id |> Base.encode16() |> String.to_atom()
+    ets_name  = node_id |> Base.encode16() |> String.to_atom()
     new_cache = :ets.rename(state.cache, ets_name)
 
     {:reply, :ok, %{state | :node_id => node_id, :cache => new_cache}}
@@ -279,6 +286,9 @@ defmodule MlDHT.RoutingTable.Worker do
   """
   def handle_cast({:add, node_id, address, socket}, state) do
     unless node_exists?(state.cache, node_id) do
+      if byte_size(node_id) > 20 do
+        Logger.error "add: #{inspect node_id}"
+      end
       {:noreply, add_node(state, {node_id, address, socket})}
     else
       {:noreply, state}
@@ -380,7 +390,7 @@ defmodule MlDHT.RoutingTable.Worker do
     try do
       cache |> :ets.tab2list() |> Enum.random() |> elem(1)
     rescue
-      _e in Enum.EmptyError -> nil
+       _e in Enum.EmptyError -> nil
     end
   end
 
@@ -397,8 +407,9 @@ defmodule MlDHT.RoutingTable.Worker do
   """
   def find_bucket_index(buckets, self_node_id, remote_node_id) do
     unless byte_size(self_node_id) == byte_size(remote_node_id) do
-      Logger.error "self_node_id: #{String.length(self_node_id)}
-      remote_node_id: #{String.length(remote_node_id)}"
+      Logger.error "self_node_id: #{byte_size(self_node_id)}
+      remote_node_id: #{byte_size(remote_node_id)}"
+
       raise ArgumentError, message: "Different length of self_node_id and remote_node_id"
     end
     bucket_index = Distance.find_bucket(self_node_id, remote_node_id)

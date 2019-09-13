@@ -1,4 +1,4 @@
-defmodule MlDHT.RoutingTable.Search do
+defmodule MlDHT.Search.Worker do
   @moduledoc false
 
   @typedoc """
@@ -16,20 +16,16 @@ defmodule MlDHT.RoutingTable.Search do
   require Logger
 
   alias MlDHT.RoutingTable.Distance
-  alias MlDHT.RoutingTable.Node
-  alias MlDHT.RoutingTable.Search
+  alias MlDHT.Search.Node
 
   ##############
   # Client API #
   ##############
 
   # @spec start_link() :: atom
-  def start_link(socket, node_id) do
-    tid  = KRPCProtocol.gen_tid()
-    name = tid_to_process_name(tid)
-
-    GenServer.start_link(__MODULE__, [socket, node_id, tid], name: name)
-    name
+  def start_link(opts) do
+    args = [opts[:socket], opts[:node_id], opts[:type], opts[:tid], opts[:name]]
+    GenServer.start_link(__MODULE__, args, name: opts[:name])
   end
 
   def get_peers(pid, args), do: GenServer.cast(pid, {:get_peers, args})
@@ -50,50 +46,27 @@ defmodule MlDHT.RoutingTable.Search do
   def type(pid), do: GenServer.call(pid, :type)
 
 
+  def tid(pid), do: GenServer.call(pid, :tid)
+
+
 #  @spec handle_reply(pid, foo, list) :: :ok
   def handle_reply(pid, remote, nodes) do
     GenServer.cast(pid, {:handle_reply, remote, nodes})
   end
 
 
-  @doc """
-  Returns `true` if there is an active search process with a given `tid`.
-  Returns `false` if the `tid` is not registerted.
-  """
-  @spec is_active?(transaction_id | atom) :: boolean
-  def is_active?(tid) when is_binary(tid) do
-    active? = tid
-    |> tid_to_process_name
-    |> Process.whereis
-
-    if active?, do: true, else: false
-  end
-
-  def is_active?(tid) when is_atom(tid) do
-    if Process.whereis(tid), do: true, else: false
-  end
-
-  @doc """
-  Converts a `tid` to a process name.
-  """
-  @spec tid_to_process_name(transaction_id) :: atom
-
-  def tid_to_process_name(tid), do: tid_to_process_name(tid, "search")
-  def tid_to_process_name("", result) do
-    String.replace_trailing(result, "_", "")
-    |> String.to_atom
-  end
-  def tid_to_process_name(tid, result) do
-    <<oct :: size(8), rest :: binary>> = tid
-    tid_to_process_name(rest, result <> "#{oct}_")
-  end
-
   ####################
   # Server Callbacks #
   ####################
 
-  def init([socket, node_id, tid]) do
-    {:ok, %{:socket => socket, :node_id => node_id, :tid => tid}}
+  def init([socket, node_id, type, tid, name]) do
+    {:ok, %{
+        :socket  => socket,
+        :node_id => node_id,
+        :type    => type,
+        :tid     => tid,
+        :name    => name
+     }}
   end
 
   def handle_info(:search_iterate, state) do
@@ -106,6 +79,8 @@ defmodule MlDHT.RoutingTable.Search do
         send_announce_msg(state)
       end
 
+      MlDHT.Registry.unregister(state.name)
+
       {:stop, :normal, state}
     else
       ## Send queries to the 3 closest nodes
@@ -114,9 +89,10 @@ defmodule MlDHT.RoutingTable.Search do
       |> Enum.filter(fn(x) ->
         x.responded == false and
         x.requested < 3 and
-        Search.Node.last_time_requested(x) > 5
+        Node.last_time_requested(x) > 5
       end)
       |> Enum.slice(0..2)
+      |> nodesinspector()
       |> send_queries(state)
 
       ## Restart Timer
@@ -126,12 +102,23 @@ defmodule MlDHT.RoutingTable.Search do
     end
   end
 
+  def nodesinspector(nodes) do
+    # Logger.error "#{inspect nodes}"
+    nodes
+  end
+
   def handle_call(:stop, _from, state) do
+    MlDHT.Registry.unregister(state.name)
+
     {:stop, :normal, :ok, state}
   end
 
   def handle_call(:type, _from, state) do
     {:reply, state.type, state}
+  end
+
+  def handle_call(:tid, _from, state) do
+    {:reply, state.tid, state}
   end
 
   def handle_cast({:get_peers, args}, state) do
@@ -163,7 +150,7 @@ defmodule MlDHT.RoutingTable.Search do
     new_nodes = Enum.map(nodes, fn(node) ->
       {id, {ip, port}} = node
       unless Enum.find(state.nodes, fn(x) -> x.id == id end) do
-        %Search.Node{id: id, ip: ip, port: port}
+        %Node{id: id, ip: ip, port: port}
       end
     end)
     |> Enum.filter(fn(x) -> x != nil end)
@@ -208,7 +195,8 @@ defmodule MlDHT.RoutingTable.Search do
 
   defp send_queries([], state), do: state
   defp send_queries([node | rest], state) do
-    Logger.debug "[#{Base.encode16(node.id)}] << #{state.type}"
+    node_id_enc = node.id |> Base.encode16()
+    Logger.debug "[#{node_id_enc}] << #{state.type}"
 
     payload = gen_request_msg(state.type, state)
     :gen_udp.send(state.socket, node.ip, node.port, payload)
@@ -223,7 +211,7 @@ defmodule MlDHT.RoutingTable.Search do
   defp nodes_to_search_nodes(nodes) do
     Enum.map(nodes, fn(node) ->
       {id, ip, port} = extract_node_infos(node)
-      %Search.Node{id: id, ip: ip, port: port}
+      %Node{id: id, ip: ip, port: port}
     end)
   end
 
@@ -268,7 +256,7 @@ defmodule MlDHT.RoutingTable.Search do
 
   defp extract_node_infos(node) when is_tuple(node), do: node
   defp extract_node_infos(node) when is_pid(node) do
-    Node.to_tuple(node)
+    MlDHT.RoutingTable.Node.to_tuple(node)
   end
 
   ## This function contains the condition when a search is completed.

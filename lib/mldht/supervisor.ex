@@ -18,8 +18,12 @@ defmodule MlDHT.Supervisor do
 
     children = [
       {DynamicSupervisor,
-        name: MlDHT.Registry.via(node_id_enc, MlDHT.RoutingTable.Supervisor),
-        strategy: :one_for_one},
+       name: MlDHT.Registry.via(node_id_enc, MlDHT.RoutingTable.Supervisor),
+       strategy: :one_for_one},
+
+      {MlDHT.Search.Supervisor,
+       name: MlDHT.Registry.via(node_id_enc, MlDHT.Search.Supervisor),
+       strategy: :one_for_one},
 
       {MlDHT.Server.Worker,
        node_id: node_id,
@@ -29,7 +33,6 @@ defmodule MlDHT.Supervisor do
        name: MlDHT.Registry.via(node_id_enc, MlDHT.Server.Storage)},
     ]
 
-    IO.inspect(children, label: "MlDHT.Supervisor children")
     Supervisor.init(children, strategy: :one_for_one)
   end
 

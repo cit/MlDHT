@@ -1,4 +1,4 @@
-defmodule MlDHT.RoutingTable.Search.Node do
+defmodule MlDHT.Search.Node do
   @moduledoc false
 
   defstruct id: nil, ip: nil, port: nil, token: nil, requested: 0,

@@ -9,13 +9,13 @@ defmodule MlDHT.Server.Worker do
   alias MlDHT.Server.Storage
   alias MlDHT.Registry
 
-  alias MlDHT.RoutingTable.Node,   as: Node
-  alias MlDHT.RoutingTable.Search, as: Search
+  alias MlDHT.RoutingTable.Node
+  alias MlDHT.Search.Worker, as: Search
 
   @type ip_vers :: :ipv4 | :ipv6
 
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts[:node_id], opts)
+    GenServer .start_link(__MODULE__, opts[:node_id], opts)
   end
 
 
@@ -25,7 +25,7 @@ defmodule MlDHT.Server.Worker do
   nodes that are close to us and save it to our own routing table.
 
   ## Example
-      iex> MlDHT.DHTServer.Worker.bootstrap
+  iex> MlDHT.DHTServer.Worker.bootstrap
   """
   def bootstrap(pid) do
     GenServer.cast(pid, :bootstrap)
@@ -38,11 +38,11 @@ defmodule MlDHT.Server.Worker do
   start a get_peers search for the given infohash.
 
   ## Example
-      iex> infohash = "3F19..." |> Base.decode16!
-      iex> MlDHT.DHTServer.search(infohash, fn(node) ->
-             {ip, port} = node
-             IO.puts "ip: #{ip} port: #{port}"
-           end)
+  iex> infohash = "3F19..." |> Base.decode16!
+  iex> MlDHT.DHTServer.search(infohash, fn(node) ->
+  {ip, port} = node
+  IO.puts "ip: #{ip} port: #{port}"
+  end)
   """
   def search(pid, infohash, callback) do
     GenServer.cast(pid, {:search, infohash, callback})
@@ -92,8 +92,8 @@ defmodule MlDHT.Server.Worker do
     ## Change secret of the token every 5 minutes
     Process.send_after(self(), :change_secret, 60 * 1000 * 5)
 
-    state = %{node_id: node_id, socket: socket, socket6: socket6, old_secret:
-              nil, secret: Utils.gen_secret}
+    state = %{node_id: node_id, node_id_enc: Base.encode16(node_id),
+              socket: socket, socket6: socket6, old_secret: nil, secret: Utils.gen_secret}
 
     # INFO Setup routingtable for IPv4
     if cfg_ipv4_is_enabled? do
@@ -149,7 +149,9 @@ defmodule MlDHT.Server.Worker do
     |> get_rtable(:ipv4)
     |> MlDHT.RoutingTable.Worker.closest_nodes(infohash)
 
-    Search.start_link(state.socket, state.node_id)
+    state.node_id_enc
+    |> MlDHT.Registry.get_pid(MlDHT.Search.Supervisor)
+    |> MlDHT.Search.Supervisor.start_child(:get_peers, state.socket, state.node_id)
     |> Search.get_peers(target: infohash, start_nodes: nodes,
     callback: callback, port: 0, announce: true)
 
@@ -161,7 +163,9 @@ defmodule MlDHT.Server.Worker do
     |> get_rtable(:ipv4)
     |> MlDHT.RoutingTable.Worker.closest_nodes(infohash)
 
-    Search.start_link(state.socket, state.node_id)
+    state.node_id_enc
+    |> MlDHT.Registry.get_pid(MlDHT.Search.Supervisor)
+    |> MlDHT.Search.Supervisor.start_child(:get_peers, state.socket, state.node_id)
     |> Search.get_peers(target: infohash, start_nodes: nodes,
     callback: callback, port: port, announce: true)
 
@@ -173,7 +177,9 @@ defmodule MlDHT.Server.Worker do
     |> get_rtable(:ipv4)
     |> MlDHT.RoutingTable.Worker.closest_nodes(infohash)
 
-    Search.start_link(state.socket, state.node_id)
+    state.node_id_enc
+    |> MlDHT.Registry.get_pid(MlDHT.Search.Supervisor)
+    |> MlDHT.Search.Supervisor.start_child(:get_peers, state.socket, state.node_id)
     |> Search.get_peers(target: infohash, start_nodes: nodes, port: 0,
     callback: callback, announce: false)
 
@@ -195,15 +201,27 @@ defmodule MlDHT.Server.Worker do
     # end
 
     raw_data
-    |> :binary.list_to_bin
+    |> :binary.list_to_bin()
     |> String.trim_trailing("\n")
-    |> KRPCProtocol.decode
+    |> KRPCProtocol.decode()
+    |> nodeinspector(raw_data, ip, port)
     |> handle_message({socket, get_ip_vers(socket)}, ip, port, state)
   end
 
   #########
   # Error #
   #########
+
+
+  def nodeinspector({:invalid, remote}, _raw_data, _ip, _port), do: {:invalid, remote}
+  def nodeinspector({type, remote}, raw_data, ip, port) do
+    if Map.has_key?(remote, :node_id) and byte_size(remote.node_id) > 20 do
+      Logger.error "RECEIVED Broken node_id length #{inspect ip} #{inspect port}"
+      Logger.error "#{inspect raw_data, limit: 1000}"
+    end
+
+    {type, remote}
+  end
 
   def handle_message({:error, error}, _socket, ip, port, state) do
     args    = [code: error.code, msg: error.msg, tid: error.tid]
@@ -339,8 +357,9 @@ defmodule MlDHT.Server.Worker do
   # Incoming DHT Replies #
   ########################
 
-  def handle_message({:error_reply, error}, _socket, _ip, _port, state) do
-    Logger.error "[#{__MODULE__}] >> error (#{error.code}: #{error.msg})"
+  def handle_message({:error_reply, error}, _socket, ip, port, state) do
+    ip_port_str = Utils.tuple_to_ipstr(ip, port)
+    Logger.error "[#{ip_port_str}] >> error (#{error.code}: #{error.msg})"
 
     {:noreply, state}
   end
@@ -348,15 +367,17 @@ defmodule MlDHT.Server.Worker do
   def handle_message({:find_node_reply, remote}, {socket, ip_vers}, ip, port, state) do
     Logger.debug "[#{Base.encode16(remote.node_id)}] >> find_node_reply"
     response_received(remote.node_id, state.node_id, {ip, port}, {socket, ip_vers})
+    tid_enc = Base.encode16(remote.tid)
 
-    pname = Search.tid_to_process_name(remote.tid)
-    if Search.is_active?(remote.tid) do
+    case MlDHT.Registry.get_pid(state.node_id_enc, Search, tid_enc) do
+      nil -> Logger.debug "[#{Base.encode16(remote.node_id)}] ignore unknown tid: #{tid_enc} "
+      pid ->
       ## If this belongs to an active search, it is actual a get_peers_reply
       ## without a token.
-      if Search.type(pname) == :get_peers do
+      if Process.alive?(pid) and Search.type(pid) == :get_peers do
         handle_message({:get_peer_reply, remote}, {socket, ip_vers}, ip, port, state)
       else
-        Search.handle_reply(pname, remote, remote.nodes)
+        Process.alive?(pid) and Search.handle_reply(pid, remote, remote.nodes)
       end
     end
 
@@ -373,10 +394,11 @@ defmodule MlDHT.Server.Worker do
   def handle_message({:get_peer_reply, remote}, {socket, ip_vers}, ip, port, state) do
     Logger.debug "[#{Base.encode16(remote.node_id)}] >> get_peer_reply"
     response_received(remote.node_id, state.node_id, {ip, port}, {socket, ip_vers})
+    tid_enc = Base.encode16(remote.tid)
 
-    pname = Search.tid_to_process_name(remote.tid)
-    if Search.is_active?(remote.tid) do
-      Search.handle_reply(pname, remote, remote.nodes)
+    case MlDHT.Registry.get_pid(state.node_id_enc, Search, tid_enc) do
+      nil -> Logger.debug "[#{Base.encode16(remote.node_id)}] ignore unknown tid: #{tid_enc} "
+      pid -> Search.handle_reply(pid, remote, remote.nodes)
     end
 
     {:noreply, state}
@@ -396,7 +418,7 @@ defmodule MlDHT.Server.Worker do
   defp inet_option(:ipv4), do: [:inet]
   defp inet_option(:ipv6), do: [:inet6, {:ipv6_v6only, true}]
 
-  defp maybe_put(list, name, nil), do: list
+  defp maybe_put(list, _name, nil), do: list
   defp maybe_put(list, name, value), do: list ++ [{name, value}]
 
   defp config(value, ret \\ nil), do: Application.get_env(:mldht, value, ret)
@@ -411,8 +433,11 @@ defmodule MlDHT.Server.Worker do
     Logger.debug "nodes: #{inspect nodes}"
 
     ## Start a find_node search to collect neighbors for our routing table
-    Search.start_link(socket, state.node_id)
+    state.node_id_enc
+    |> MlDHT.Registry.get_pid(MlDHT.Search.Supervisor)
+    |> MlDHT.Search.Supervisor.start_child(:find_node, socket, state.node_id)
     |> Search.find_node(target: state.node_id, start_nodes: nodes)
+
   end
 
   ## function iterates over a list of bootstrapping nodes and tries to
@@ -452,22 +477,31 @@ defmodule MlDHT.Server.Worker do
 
 
   defp query_received(remote_node_id, own_node_id, ip_port, {socket, ip_vers}) do
-    # TODO: node_id is not the own but the peer's node_id
+    # TODO node_id is not the own but the peer's node_id
     rtable = own_node_id |> get_rtable(ip_vers)
 
     if node_pid = MlDHT.RoutingTable.Worker.get(rtable, remote_node_id) do
       Node.update(node_pid, :last_query_rcv)
     else
+      if byte_size(remote_node_id) > 20 do
+        Logger.error "remote_id: #{inspect remote_node_id}"
+
+      end
+
       MlDHT.RoutingTable.Worker.add(rtable, remote_node_id, ip_port, socket)
     end
   end
 
   defp response_received(remote_node_id, own_node_id, ip_port, {socket, ip_vers}) do
-    # TODO: node_id is not the own but the peer's node_id
+    # TODO node_id is not the own but the peer's node_id
     rtable = own_node_id |> get_rtable(ip_vers)
+
     if node_pid = MlDHT.RoutingTable.Worker.get(rtable, remote_node_id) do
       Node.update(node_pid, :last_response_rcv)
     else
+      if byte_size(remote_node_id) > 20 do
+        Logger.error "remote_id: #{inspect remote_node_id}"
+      end
       MlDHT.RoutingTable.Worker.add(rtable, remote_node_id, ip_port, socket)
     end
   end
