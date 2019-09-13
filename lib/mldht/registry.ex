@@ -1,28 +1,32 @@
 defmodule MlDHT.Registry do
   require Logger
 
+  @name __MODULE__
+
   @moduledoc ~S"""
   This module just capsules functions that avoid boilerplate when using the
   MlDHT Registry. (They are not callbacks)
   """
 
-  def start(), do: Registry.start_link(keys: :unique, name: MlDHT.Registry)
+  def start(), do: Registry.start_link(keys: :unique, name: @name)
 
 
-  def via(name), do: {:via, Registry, {MlDHT.Registry, name}}
+  def unregister(name), do: Registry.unregister(@name, name)
+
+
+  def lookup(name), do: Registry.lookup(@name, name)
+
+
+  def via(name), do: {:via, Registry, {@name, name}}
   def via(node_id_enc, module), do: id(node_id_enc, module) |> via()
   def via(node_id_enc, module, id), do: id(node_id_enc, module, id) |> via()
 
-
-  def lookup(name), do: Registry.lookup(MlDHT.Registry, name)
-
-
   def get_pid(name) do
-    case Registry.lookup(MlDHT.Registry, name) do
+    case Registry.lookup(@name, name) do
       [{pid, _}] -> pid
-      e ->
-        Logger.error "Could not find Process with name #{name} in MlDHT.Registry"
-        require IEx; IEx.pry
+      _e ->
+        Logger.debug "Could not find Process with name #{name} in MlDHT.Registry"
+        nil
     end
   end
   def get_pid(node_id_enc, module), do: id(node_id_enc, module) |> get_pid()
