@@ -8,7 +8,7 @@ defmodule MlDHT.Search.Supervisor do
   end
 
   def init({:ok, strategy}) do
-    DynamicSupervisor.init(strategy: strategy, restart: :temporary)
+    DynamicSupervisor.init(strategy: strategy)
   end
 
   def start_child(pid, type, socket, node_id) do

@@ -13,7 +13,9 @@ defmodule MlDHT.Search.Worker.Test do
        strategy: :one_for_one})
 
     [pid:     MlDHT.Registry.get_pid(node_id_enc, MlDHT.Search.Supervisor),
-     node_id:     node_id]
+     node_id:     node_id,
+     node_id_enc: node_id_enc
+    ]
   end
 
   test "get_peers", state do
@@ -40,6 +42,18 @@ defmodule MlDHT.Search.Worker.Test do
     Search.stop(search_pid)
 
     assert Process.alive?(search_pid) == false
+  end
+
+  test "if search exists normally and does not restart", state do
+    search_pid = state.pid
+    |> MlDHT.Search.Supervisor.start_child(:get_peers, nil, state.node_id)
+
+    tid_enc = search_pid
+    |> Search.tid()
+    |> Base.encode16()
+
+    Search.stop(search_pid)
+    assert MlDHT.Registry.get_pid(state.node_id_enc, Search, tid_enc) == nil
   end
 
 end

@@ -11,7 +11,7 @@ defmodule MlDHT.Search.Worker do
   """
   @type search_type :: :get_peers | :find_node
 
-  use GenServer
+  use GenServer, restart: :temporary
 
   require Logger
 
@@ -60,12 +60,15 @@ defmodule MlDHT.Search.Worker do
   ####################
 
   def init([socket, node_id, type, tid, name]) do
+    ## Extract the id from the via string
+    {_, _, {_, id}} = name
+
     {:ok, %{
         :socket  => socket,
         :node_id => node_id,
         :type    => type,
         :tid     => tid,
-        :name    => name
+        :name    => id
      }}
   end
 
