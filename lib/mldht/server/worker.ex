@@ -483,11 +483,6 @@ defmodule MlDHT.Server.Worker do
     if node_pid = MlDHT.RoutingTable.Worker.get(rtable, remote_node_id) do
       Node.update(node_pid, :last_query_rcv)
     else
-      if byte_size(remote_node_id) > 20 do
-        Logger.error "remote_id: #{inspect remote_node_id}"
-
-      end
-
       MlDHT.RoutingTable.Worker.add(rtable, remote_node_id, ip_port, socket)
     end
   end
@@ -499,9 +494,6 @@ defmodule MlDHT.Server.Worker do
     if node_pid = MlDHT.RoutingTable.Worker.get(rtable, remote_node_id) do
       Node.update(node_pid, :last_response_rcv)
     else
-      if byte_size(remote_node_id) > 20 do
-        Logger.error "remote_id: #{inspect remote_node_id}"
-      end
       MlDHT.RoutingTable.Worker.add(rtable, remote_node_id, ip_port, socket)
     end
   end

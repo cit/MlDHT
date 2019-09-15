@@ -86,7 +86,6 @@ defmodule MlDHT.RoutingTable.Worker do
     Process.send_after(self(), :bucket_maintenance, @bucket_maintenance_time)
 
     ## Generate name of the ets cache table from the node_id as an atom
-    IO.inspect(node_id, label: "node_id")
     ets_name = node_id |> Base.encode16() |> String.to_atom()
 
     {:ok, %{
@@ -276,9 +275,6 @@ defmodule MlDHT.RoutingTable.Worker do
   """
   def handle_cast({:add, node_id, address, socket}, state) do
     unless node_exists?(state.cache, node_id) do
-      if byte_size(node_id) > 20 do
-        Logger.error "add: #{inspect node_id}"
-      end
       {:noreply, add_node(state, {node_id, address, socket})}
     else
       {:noreply, state}
