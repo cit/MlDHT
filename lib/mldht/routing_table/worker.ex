@@ -23,7 +23,7 @@ defmodule MlDHT.RoutingTable.Worker do
   @response_time 60 * 5 * 1000
 
   ## 30 seconds
-  @neighbourhood_maintenance_time 5* 60 * 1000
+  @neighbourhood_maintenance_time 5 * 60 * 1000
 
   ## 3 minutes
   @bucket_maintenance_time 60 * 3 * 1000
@@ -44,16 +44,6 @@ defmodule MlDHT.RoutingTable.Worker do
 
   def add(name, remote_node_id, address, socket) do
     GenServer.cast(name, {:add, remote_node_id, address, socket})
-  end
-
-  # TODO: This function changes our node ID. This should not be necessary anymore as
-  # we set the node_id in the app
-  def node_id(name, node_id) do
-    GenServer.call(name, {:node_id, node_id})
-  end
-
-  def node_id(name) do
-    GenServer.call(name, :node_id)
   end
 
   def size(name) do
