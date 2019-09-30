@@ -5,8 +5,6 @@ defmodule MlDHT.Server.Storage do
 
   require Logger
 
-  @name __MODULE__
-
   ## 5 Minutes
   @review_time 60 * 5
 
