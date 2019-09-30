@@ -204,24 +204,12 @@ defmodule MlDHT.Server.Worker do
     |> :binary.list_to_bin()
     |> String.trim_trailing("\n")
     |> KRPCProtocol.decode()
-    |> nodeinspector(raw_data, ip, port)
     |> handle_message({socket, get_ip_vers(socket)}, ip, port, state)
   end
 
   #########
   # Error #
   #########
-
-
-  def nodeinspector({:invalid, remote}, _raw_data, _ip, _port), do: {:invalid, remote}
-  def nodeinspector({type, remote}, raw_data, ip, port) do
-    if Map.has_key?(remote, :node_id) and byte_size(remote.node_id) > 20 do
-      Logger.error "RECEIVED Broken node_id length #{inspect ip} #{inspect port}"
-      Logger.error "#{inspect raw_data, limit: 1000}"
-    end
-
-    {type, remote}
-  end
 
   def handle_message({:error, error}, _socket, ip, port, state) do
     args    = [code: error.code, msg: error.msg, tid: error.tid]
