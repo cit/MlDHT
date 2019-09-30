@@ -1,12 +1,12 @@
 defmodule MlDHT.RoutingTable.Node do
   @moduledoc false
 
-  use GenServer
+  use GenServer, restart: :temporary
 
   require Logger
 
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, [opts[:own_node_id], opts[:node_tuple]])
+    GenServer.start_link(__MODULE__, [opts])
   end
 
   @doc """
@@ -22,6 +22,11 @@ defmodule MlDHT.RoutingTable.Node do
 
   def socket(pid) do
     GenServer.call(pid, :socket)
+  end
+
+  def bucket_index(pid), do: GenServer.call(pid, :bucket_index)
+  def bucket_index(pid, new_index) do
+    GenServer.cast(pid, {:bucket_index, new_index})
   end
 
   def goodness(pid) do
@@ -80,17 +85,18 @@ defmodule MlDHT.RoutingTable.Node do
   ## GenServer API
   ###
 
-  def init([own_node_id, node_tuple]) do
-    {node_id, {ip, port}, socket} = node_tuple
+  def init([opts]) do
+    {node_id, {ip, port}, socket} = opts[:node_tuple]
 
     {:ok,
      %{
-       :own_node_id => own_node_id,
-       :node_id     => node_id,
-       :ip          => ip,
-       :port        => port,
-       :socket      => socket,
-       :goodness    => :good,
+       :own_node_id  => opts[:own_node_id],
+       :bucket_index => opts[:bucket_index],
+       :node_id      => node_id,
+       :ip           => ip,
+       :port         => port,
+       :socket       => socket,
+       :goodness     => :good,
 
        ## Timer
        :last_response_rcv => :os.system_time(:seconds),
@@ -106,6 +112,10 @@ defmodule MlDHT.RoutingTable.Node do
 
   def handle_call(:id, _from, state) do
     {:reply, state.node_id, state}
+  end
+
+  def handle_call(:bucket_index, _from, state) do
+    {:reply, state.bucket_index, state}
   end
 
   def handle_call(:socket, _from, state) do
@@ -149,6 +159,10 @@ defmodule MlDHT.RoutingTable.Node do
 
   def handle_call({:update, key}, _from, state) do
     {:reply, :ok, Map.put(state, key, :os.system_time(:seconds))}
+  end
+
+  def handle_cast({:bucket_index, new_index}, state) do
+    {:noreply, %{state | :bucket_index => new_index}}
   end
 
   ###########

@@ -16,27 +16,29 @@ defmodule MlDHT.RoutingTable.Worker do
   # Constants #
   #############
 
+  ## One minute
+  @min_in_sec 60 * 1000
+
   ## 5 Minutes
-  @review_time 60 * 5 * 1000
+  @review_time 5 * @min_in_sec
 
   ## 5 minutes
-  @response_time 60 * 5 * 1000
+  @response_time 5 * @min_in_sec
 
-  ## 30 seconds
-  @neighbourhood_maintenance_time 5 * 60 * 1000
+  ## 5 minutes
+  @neighbourhood_maintenance_time 5 * @min_in_sec
 
   ## 3 minutes
-  @bucket_maintenance_time 60 * 3 * 1000
+  @bucket_maintenance_time 3 * @min_in_sec
 
   ## 15 minutes (in seconds)
-  @bucket_max_idle_time 60 * 15
+  @bucket_max_idle_time 15 * @min_in_sec
 
   ##############
   # Public API #
   ##############
 
   def start_link(opts) do
-    # TODO: pass rtable name
     Logger.debug "Starting RoutingTable worker: #{inspect(opts)}"
     init_args = [node_id: opts[:node_id], rt_name: opts[:rt_name]]
     GenServer.start_link(__MODULE__,  init_args, opts)
@@ -52,6 +54,10 @@ defmodule MlDHT.RoutingTable.Worker do
 
   def cache_size(name) do
     GenServer.call(name, :cache_size)
+  end
+
+  def update_bucket(name, bucket_index) do
+    GenServer.cast(name, {:update_bucket, bucket_index})
   end
 
   def print(name) do
@@ -269,6 +275,23 @@ defmodule MlDHT.RoutingTable.Worker do
     {:reply, :ok, %{state | :buckets => new_bucket}}
   end
 
+
+  @doc """
+  This function update the last_update time value in the bucket.
+  """
+  def handle_cast({:update_bucket, bucket_index}, state) do
+    new_bucket = state.buckets
+    |> Enum.at(bucket_index)
+    |> Bucket.update()
+
+    new_buckets = state.buckets
+    |> List.replace_at(bucket_index, new_bucket)
+
+    {:noreply, %{ state | :buckets => new_buckets}}
+  end
+
+
+
   @doc """
   This function tries to add a new node to our routing table. If it was
   sucessful, it returns the node pid and if not it will return nil.
@@ -317,7 +340,8 @@ defmodule MlDHT.RoutingTable.Worker do
         # (the pid won't be the same after a process has been restarted by a supervisor)
         # name = MlDHT.Registry.via(..)
 
-        node_child = {Node, own_node_id: my_node_id, node_tuple: node_tuple}
+        node_child = {Node, own_node_id: my_node_id, node_tuple: node_tuple,
+                      bucket_index: index}
 
         {:ok, pid} = my_node_id
         |> Base.encode16()
@@ -357,6 +381,9 @@ defmodule MlDHT.RoutingTable.Worker do
 
       ## Remove the node from the current bucket
       filtered_bucket = Bucket.del(current_bucket, Node.id(node))
+
+      ## Change bucket index in the Node to the new one
+      Node.bucket_index(node, index)
 
       ## Then add it to the new_bucket
       List.replace_at(buckets, current_index, filtered_bucket)

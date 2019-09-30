@@ -475,24 +475,27 @@ defmodule MlDHT.Server.Worker do
     :gen_udp.send(socket, ip, port, payload)
   end
 
+  # TODO query_received and response_received are nearly identical
 
-  defp query_received(remote_node_id, own_node_id, ip_port, {socket, ip_vers}) do
-    # TODO node_id is not the own but the peer's node_id
-    rtable = own_node_id |> get_rtable(ip_vers)
+  defp query_received(remote_node_id, node_id, ip_port, {socket, ip_vers}) do
+    rtable = node_id |> get_rtable(ip_vers)
 
     if node_pid = MlDHT.RoutingTable.Worker.get(rtable, remote_node_id) do
       Node.update(node_pid, :last_query_rcv)
+      index = Node.bucket_index(node_pid)
+      MlDHT.RoutingTable.Worker.update_bucket(rtable, index)
     else
       MlDHT.RoutingTable.Worker.add(rtable, remote_node_id, ip_port, socket)
     end
   end
 
-  defp response_received(remote_node_id, own_node_id, ip_port, {socket, ip_vers}) do
-    # TODO node_id is not the own but the peer's node_id
-    rtable = own_node_id |> get_rtable(ip_vers)
+  defp response_received(remote_node_id, node_id, ip_port, {socket, ip_vers}) do
+    rtable = node_id |> get_rtable(ip_vers)
 
     if node_pid = MlDHT.RoutingTable.Worker.get(rtable, remote_node_id) do
       Node.update(node_pid, :last_response_rcv)
+      index = Node.bucket_index(node_pid)
+      MlDHT.RoutingTable.Worker.update_bucket(rtable, index)
     else
       MlDHT.RoutingTable.Worker.add(rtable, remote_node_id, ip_port, socket)
     end
