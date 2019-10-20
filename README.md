@@ -22,7 +22,7 @@ defp application do
 end
 
 defp deps do
-  [{:mldht, "~> 0.0.1"}]
+  [{:mldht, "~> 0.0.3"}]
 end
 ```
 
@@ -30,16 +30,10 @@ end
 
 If the application is loaded it automatically bootstraps itself into the overlay network. It does this by starting a `find_node` search for a node that belongs to the same bucket as our own node id. In `mix.exs` you will find the boostrapping nodes that will be used for that first search. By doing this, we will quickly collect nodes that are close to us.
 
-If you are curious and would like to see the content of the `RoutingTable` you can use the following command:
+You can use the following function to find nodes for a specific BitTorrent infohash (e.g. Ubuntu 19.04):
 
 ```elixir
-iex> RoutingTable.Worker.print
-```
-
-You can use the following function to find nodes for a specific BitTorrent infohash (e.g. Ubuntu 15.04):
-
-```elixir
-iex> "3F19B149F53A50E14FC0B79926A391896EABAB6F"
+iex> "D540FC48EB12F2833163EED6421D449DD8F1CE1F"
      |> Base.decode16!
      |> MlDHT.search(fn(node) -> IO.puts "#{inspect node}" end)
 ```
@@ -47,7 +41,7 @@ iex> "3F19B149F53A50E14FC0B79926A391896EABAB6F"
 If you would like to search for nodes and announce yourself to the DHT network use the following function:
 
 ```elixir
-iex> "3F19B149F53A50E14FC0B79926A391896EABAB6F"
+iex> "D540FC48EB12F2833163EED6421D449DD8F1CE1F"
      |> Base.decode16!
      |> MlDHT.search_announce(6881, fn(node) -> IO.puts "#{inspect node}" end)
 ```
@@ -55,7 +49,7 @@ iex> "3F19B149F53A50E14FC0B79926A391896EABAB6F"
 It is also possible search and announce yourself to the DHT network without a TCP port. By doing this, the source port of the UDP packet should be used instead.
 
 ```elixir
-iex> "3F19B149F53A50E14FC0B79926A391896EABAB6F"
+iex> "D540FC48EB12F2833163EED6421D449DD8F1CE1F"
      |> Base.decode16!
      |> MlDHT.search_announce(fn(node) -> IO.puts "#{inspect node}" end)
 ```
