@@ -248,7 +248,7 @@ defmodule MlDHT.Server.Worker do
     ## Get closest nodes for the requested target from the routing table
     nodes = state.node_id
     |> get_rtable(ip_vers)
-    |> MlDHT.RoutingTable.Worker.closest_nodes(remote.target)
+    |> MlDHT.RoutingTable.Worker.closest_nodes(remote.target, remote.node_id)
     |> Enum.map(fn(pid) ->
       try do
         if Process.alive?(pid) do

@@ -68,8 +68,12 @@ defmodule MlDHT.RoutingTable.Worker do
     GenServer.call(name, {:get, node_id})
   end
 
+  def closest_nodes(name, target, remote_node_id) do
+    GenServer.call(name, {:closest_nodes, target, remote_node_id})
+  end
+
   def closest_nodes(name, target) do
-    GenServer.call(name, {:closest_nodes, target})
+    GenServer.call(name, {:closest_nodes, target, nil})
   end
 
   def del(name, node_id) do
@@ -210,9 +214,10 @@ defmodule MlDHT.RoutingTable.Worker do
   This function returns the 8 closest nodes in our routing table to a specific
   target.
   """
-  def handle_call({:closest_nodes, target}, _from, state ) do
+  def handle_call({:closest_nodes, target, remote_node_id}, _from, state ) do
     list = state.cache
     |> :ets.tab2list()
+    |> Enum.filter(&(elem(&1, 0) != remote_node_id))
     |> Enum.sort(fn(x, y) ->
       Distance.xor_cmp(elem(x, 0), elem(y, 0), target, &(&1 < &2))
     end)
@@ -221,6 +226,7 @@ defmodule MlDHT.RoutingTable.Worker do
 
     {:reply, list, state}
   end
+
 
   @doc """
   This functiowe will ren returns the pid for a specific node id. If the node

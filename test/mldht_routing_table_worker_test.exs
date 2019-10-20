@@ -149,4 +149,27 @@ defmodule MlDHT.RoutingTable.Worker.Test do
     assert list == close_nodes
   end
 
+  test "if routing table closest_nodes filters the source" do
+    MlDHT.RoutingTable.Worker.add(@name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
+    MlDHT.RoutingTable.Worker.add(@name, "CCCCCCCCCCCCCCCCCCCC", {{127, 0, 0, 1}, 6881}, 23)
+    MlDHT.RoutingTable.Worker.add(@name, "DDDDDDDDDDDDDDDDDDDD", {{127, 0, 0, 1}, 6881}, 23)
+
+    node_id = "AAAAAAAAAAAAAAAAAAAB"
+    source  = "CCCCCCCCCCCCCCCCCCCC"
+
+    list = MlDHT.RoutingTable.Worker.closest_nodes(@name, node_id, source)
+    assert length(list) == 2
+  end
+
+  test "if routing table closest_nodes does not filters the source" do
+    MlDHT.RoutingTable.Worker.add(@name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
+    MlDHT.RoutingTable.Worker.add(@name, "CCCCCCCCCCCCCCCCCCCC", {{127, 0, 0, 1}, 6881}, 23)
+    MlDHT.RoutingTable.Worker.add(@name, "DDDDDDDDDDDDDDDDDDDD", {{127, 0, 0, 1}, 6881}, 23)
+
+    node_id = "AAAAAAAAAAAAAAAAAAAB"
+
+    list = MlDHT.RoutingTable.Worker.closest_nodes(@name, node_id)
+    assert length(list) == 3
+  end
+
 end
