@@ -14,6 +14,10 @@ defmodule MlDHT.Server.Worker do
 
   @type ip_vers :: :ipv4 | :ipv6
 
+  # Time after the secret changes
+  @time_change_secret 60 * 1000 * 5
+
+
   def start_link(opts) do
     GenServer .start_link(__MODULE__, opts[:node_id], opts)
   end
@@ -90,7 +94,7 @@ defmodule MlDHT.Server.Worker do
     socket6  = if cfg_ipv6_is_enabled?, do: create_udp_socket(cfg_port, :ipv6), else: nil
 
     ## Change secret of the token every 5 minutes
-    Process.send_after(self(), :change_secret, 60 * 1000 * 5)
+    Process.send_after(self(), :change_secret, @time_change_secret)
 
     state = %{node_id: node_id, node_id_enc: Base.encode16(node_id),
               socket: socket, socket6: socket6, old_secret: nil, secret: Utils.gen_secret}
@@ -189,6 +193,8 @@ defmodule MlDHT.Server.Worker do
 
   def handle_info(:change_secret, state) do
     Logger.debug "Change Secret"
+    Process.send_after(self(), :change_secret, @time_change_secret)
+
     {:noreply, %{state | old_secret: state.secret, secret: Utils.gen_secret()}}
   end
 
