@@ -303,10 +303,10 @@ defmodule MlDHT.RoutingTable.Worker do
   sucessful, it returns the node pid and if not it will return nil.
   """
   def handle_cast({:add, node_id, address, socket}, state) do
-    unless node_exists?(state.cache, node_id) do
-      {:noreply, add_node(state, {node_id, address, socket})}
-    else
+    if node_exists?(state.cache, node_id) do
       {:noreply, state}
+    else
+      {:noreply, add_node(state, {node_id, address, socket})}
     end
   end
 
