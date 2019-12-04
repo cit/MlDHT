@@ -243,7 +243,7 @@ defmodule MlDHT.RoutingTable.Worker do
   """
   def handle_call(:size, _from, state) do
     size = state.buckets
-    |> Enum.map(fn(b)-> Bucket.size(b) end)
+    |> Enum.map(fn(b) -> Bucket.size(b) end)
     |> Enum.reduce(fn(x, acc) -> x + acc end)
 
     {:reply, size, state}
@@ -418,7 +418,7 @@ defmodule MlDHT.RoutingTable.Worker do
   Returns the index of the last bucket as integer.
   """
   def index_last_bucket(buckets) do
-    Enum.count(buckets) -1
+    Enum.count(buckets) - 1
   end
 
   @doc """

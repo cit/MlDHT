@@ -120,7 +120,7 @@ defmodule MlDHT.RoutingTable.Worker.Test do
 
     ## Generate close node_ids
     close_nodes = 1 .. 16
-    |> Enum.map(fn(x) -> MlDHT.RoutingTable.Distance.gen_node_id(160-x, node_id) end)
+    |> Enum.map(fn(x) -> MlDHT.RoutingTable.Distance.gen_node_id(160 - x, node_id) end)
     |> Enum.filter(fn(x) -> x != node_id end)
     |> Enum.uniq()
     |> Enum.slice(0 .. 7)
