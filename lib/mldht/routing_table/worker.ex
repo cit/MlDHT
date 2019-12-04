@@ -181,7 +181,7 @@ defmodule MlDHT.RoutingTable.Worker do
   def handle_info(:bucket_maintenance, state) do
     state.buckets
     |> Stream.with_index
-    |> Enum.map(fn({bucket, index}) ->
+    |> Enum.each(fn({bucket, index}) ->
       if Bucket.age(bucket) >= @bucket_max_idle_time and Bucket.size(bucket) < 6 do
         case random_node(state.cache) do
           node_pid when is_pid(node_pid) ->

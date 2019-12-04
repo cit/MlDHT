@@ -377,7 +377,7 @@ defmodule MlDHT.Server.Worker do
 
     ## Ping all nodes
     payload = KRPCProtocol.encode(:ping, node_id: state.node_id)
-    Enum.map(remote.nodes, fn(node_tuple) ->
+    Enum.each(remote.nodes, fn(node_tuple) ->
       {_id, {ip, port}} = node_tuple
       :gen_udp.send(socket, ip, port, payload)
     end)
