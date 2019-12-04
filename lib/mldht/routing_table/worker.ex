@@ -381,7 +381,7 @@ defmodule MlDHT.RoutingTable.Worker do
     current_index  = length(buckets) - 2
     index          = find_bucket_index(buckets, my_node_id, Node.id(node))
 
-    new_buckets = if (current_index != index) do
+    new_buckets = if current_index != index do
       current_bucket = Enum.at(buckets, current_index)
       new_bucket     = Enum.at(buckets, index)
 

@@ -33,7 +33,7 @@ defmodule MlDHT.RoutingTable.Distance do
     << byte_b      :: 8, rest_b      :: bitstring >> = node_id_b
     << byte_target :: 8, rest_target :: bitstring >> = target
 
-    if (byte_a == byte_b) do
+    if byte_a == byte_b do
       xor_cmp(rest_a, rest_b, rest_target, func)
     else
       xor_a = Bitwise.bxor(byte_a, byte_target)
