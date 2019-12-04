@@ -8,7 +8,7 @@ defmodule MlDHT.Registry do
   MlDHT Registry. (They are not callbacks)
   """
 
-  def start(), do: Registry.start_link(keys: :unique, name: @name)
+  def start, do: Registry.start_link(keys: :unique, name: @name)
 
 
   def unregister(name), do: Registry.unregister(@name, name)
