@@ -31,15 +31,15 @@ defmodule MlDHT.RoutingTable.Bucket do
   end
 
   def add(bucket, element) when is_list(element) do
-    %{ Bucket.new(bucket.index) |nodes: bucket.nodes ++ List.flatten(element)}
+    %{Bucket.new(bucket.index) |nodes: bucket.nodes ++ List.flatten(element)}
   end
 
   def add(bucket, element) do
-    %{ Bucket.new(bucket.index) |nodes: bucket.nodes ++ [element]}
+    %{Bucket.new(bucket.index) |nodes: bucket.nodes ++ [element]}
   end
 
   def update(bucket) do
-    %{ Bucket.new(bucket.index) |nodes: bucket.nodes }
+    %{Bucket.new(bucket.index) |nodes: bucket.nodes }
   end
 
   def filter(bucket, func) do

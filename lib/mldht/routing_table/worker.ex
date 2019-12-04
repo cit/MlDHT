@@ -293,7 +293,7 @@ defmodule MlDHT.RoutingTable.Worker do
     new_buckets = state.buckets
     |> List.replace_at(bucket_index, new_bucket)
 
-    {:noreply, %{ state | :buckets => new_buckets}}
+    {:noreply, %{state | :buckets => new_buckets}}
   end
 
 
