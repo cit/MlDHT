@@ -29,7 +29,7 @@ defmodule MlDHT do
   @typedoc """
   A non negative integer (0--65565) which represents a TCP port number.
   """
-  @type tcp_port :: 0..65565
+  @type tcp_port :: 0..65_565
 
   @typedoc """
   TODO
