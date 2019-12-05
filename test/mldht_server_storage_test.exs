@@ -29,14 +29,16 @@ defmodule MlDHT.Server.Storage.Test do
 
   test "get_nodes", test_context do
     pid = test_context.pid
+    ip1 = {127, 0, 0, 1}
+    ip2 = {127, 0, 0, 2}
 
-    Storage.put(pid, "aaaa", {127, 0, 0, 1}, 6881)
-    Storage.put(pid, "aaaa", {127, 0, 0, 1}, 6881)
-    Storage.put(pid, "aaaa", {127, 0, 0, 2}, 6882)
+    Storage.put(pid, "aaaa", ip1, 6881)
+    Storage.put(pid, "aaaa", ip1, 6881)
+    Storage.put(pid, "aaaa", ip2, 6882)
 
     Storage.print(pid)
 
-    assert Storage.get_nodes(pid, "aaaa") == [{{127,0,0,1}, 6881}, {{127, 0, 0, 2}, 6882}]
+    assert Storage.get_nodes(pid, "aaaa") == [{ip1, 6881}, {ip2, 6882}]
   end
 
 end
