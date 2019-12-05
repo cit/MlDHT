@@ -399,11 +399,9 @@ defmodule MlDHT.RoutingTable.Worker do
   returns nil.
   """
   def random_node(cache) do
-    try do
-      cache |> :ets.tab2list() |> Enum.random() |> elem(1)
-    rescue
-       _e in Enum.EmptyError -> nil
-    end
+    cache |> :ets.tab2list() |> Enum.random() |> elem(1)
+  rescue
+    _e in Enum.EmptyError -> nil
   end
 
   @doc """
