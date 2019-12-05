@@ -90,7 +90,7 @@ defmodule MlDHT.RoutingTable.Worker do
 
     ## Start timer for neighbourhood maintenance
     Process.send_after(self(), :neighbourhood_maintenance,
-                       @neighbourhood_maintenance_time)
+      @neighbourhood_maintenance_time)
 
     ## Start timer for bucket maintenance
     Process.send_after(self(), :bucket_maintenance, @bucket_maintenance_time)
@@ -146,20 +146,8 @@ defmodule MlDHT.RoutingTable.Worker do
   neighbourhood.
   """
   def handle_info(:neighbourhood_maintenance, state) do
-    case random_node(state.cache) do
-      node_pid when is_pid(node_pid) ->
-        ## Start find_node search
-        target = Distance.gen_node_id(152, state[:node_id])
-        node    = Node.to_tuple(node_pid)
-
-        state.node_id_enc
-        |> MlDHT.Registry.get_pid(MlDHT.Search.Supervisor)
-        |> MlDHT.Search.Supervisor.start_child(:find_node, Node.socket(node_pid), state.node_id)
-        |> Search.find_node(target: target, start_nodes: [node])
-
-      nil ->
-        Logger.info "Neighbourhood Maintenance: No nodes in our routing table."
-    end
+    Distance.gen_node_id(152, state.node_id)
+    |> find_node_on_random_node(state)
 
     ## Restart the Timer
     Process.send_after(self(), :neighbourhood_maintenance, @neighbourhood_maintenance_time)
@@ -181,26 +169,11 @@ defmodule MlDHT.RoutingTable.Worker do
     state.buckets
     |> Stream.with_index
     |> Enum.each(fn({bucket, index}) ->
-      if Bucket.age(bucket) >= @bucket_max_idle_time and Bucket.size(bucket) < 6 do
-        case random_node(state.cache) do
-          node_pid when is_pid(node_pid) ->
-            node = Node.to_tuple(node_pid)
+      if Bucket.age(bucket) >= @bucket_max_idle_time or Bucket.size(bucket) < 6 do
+        Logger.info "Staring find_node search on bucket #{index}"
 
-            ## Generate a random node_id based on the bucket
-            target = Distance.gen_node_id(index, state.node_id)
-            socket = Node.socket(node_pid)
-            Logger.info "Staring find_node search on bucket #{index}"
-
-            ## Start find_node search
-            state.node_id_enc
-            |> MlDHT.Registry.get_pid(MlDHT.Search.Supervisor)
-            |> MlDHT.Search.Supervisor.start_child(:find_node, socket, state.node_id)
-            |> Search.find_node(target: target, start_nodes: [node])
-
-          nil ->
-            Logger.warn "Bucket Maintenance: No nodes in our routing table."
-        end
-
+        Distance.gen_node_id(index, state.node_id)
+        |> find_node_on_random_node(state)
       end
     end)
 
@@ -320,6 +293,25 @@ defmodule MlDHT.RoutingTable.Worker do
   # Private Functions #
   #####################
 
+
+  def find_node_on_random_node(target, state) do
+    case random_node(state.cache) do
+      node_pid when is_pid(node_pid) ->
+        node   = Node.to_tuple(node_pid)
+        socket = Node.socket(node_pid)
+
+        ## Start find_node search
+        state.node_id_enc
+        |> MlDHT.Registry.get_pid(MlDHT.Search.Supervisor)
+        |> MlDHT.Search.Supervisor.start_child(:find_node, socket, state.node_id)
+        |> Search.find_node(target: target, start_nodes: [node])
+
+      nil ->
+        Logger.warn "No nodes in our routing table."
+    end
+  end
+
+
   @doc """
   This function adds a new node to our routing table.
   """
@@ -354,9 +346,9 @@ defmodule MlDHT.RoutingTable.Worker do
 
         ## If the bucket is full and the node would belong to a bucket that is far
         ## away from us, we will just drop that node. Go away you filthy node!
-      Bucket.is_full?(bucket) and index != index_last_bucket(buckets) ->
+        Bucket.is_full?(bucket) and index != index_last_bucket(buckets) ->
         Logger.debug "Bucket #{index} is full -> drop #{Base.encode16(node_id)}"
-        state
+      state
 
       ## If the bucket is full but the node is closer to us, we will reorganize
       ## the nodes in the buckets and try again to add it to our bucket list.
