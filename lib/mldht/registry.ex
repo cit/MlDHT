@@ -10,12 +10,9 @@ defmodule MlDHT.Registry do
 
   def start, do: Registry.start_link(keys: :unique, name: @name)
 
-
   def unregister(name), do: Registry.unregister(@name, name)
 
-
   def lookup(name), do: Registry.lookup(@name, name)
-
 
   def via(name), do: {:via, Registry, {@name, name}}
   def via(node_id_enc, module), do: id(node_id_enc, module) |> via()
@@ -32,7 +29,6 @@ defmodule MlDHT.Registry do
   def get_pid(node_id_enc, module), do: id(node_id_enc, module) |> get_pid()
   def get_pid(node_id_enc, module, id), do: id(node_id_enc, module, id) |> get_pid()
 
-
   defp id(node_id_enc, module) do
     node_id_enc |> Kernel.<>("_" <> Atom.to_string(module))
   end
@@ -42,6 +38,5 @@ defmodule MlDHT.Registry do
   defp id(node_id_enc, module, id) do
     id(node_id_enc, module) <> "_" <> id
   end
-
 
 end

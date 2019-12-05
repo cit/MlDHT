@@ -38,22 +38,18 @@ defmodule MlDHT.Search.Worker do
   @spec stop(pid) :: :ok
   def stop(pid), do: GenServer.call(pid, :stop)
 
-
   @doc """
   Returns the type of the search process.
   """
   @spec type(pid) :: search_type
   def type(pid), do: GenServer.call(pid, :type)
 
-
   def tid(pid), do: GenServer.call(pid, :tid)
-
 
 #  @spec handle_reply(pid, foo, list) :: :ok
   def handle_reply(pid, remote, nodes) do
     GenServer.cast(pid, {:handle_reply, remote, nodes})
   end
-
 
   ####################
   # Server Callbacks #

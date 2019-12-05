@@ -17,11 +17,9 @@ defmodule MlDHT.Server.Worker do
   # Time after the secret changes
   @time_change_secret 60 * 1000 * 5
 
-
   def start_link(opts) do
     GenServer .start_link(__MODULE__, opts[:node_id], opts)
   end
-
 
   @doc """
   This function takes the bootstrapping nodes from the config and starts a
@@ -34,7 +32,6 @@ defmodule MlDHT.Server.Worker do
   def bootstrap(pid) do
     GenServer.cast(pid, :bootstrap)
   end
-
 
   @doc ~S"""
   This function needs an infohash as binary, and a callback function as
@@ -59,7 +56,6 @@ defmodule MlDHT.Server.Worker do
   def search_announce(pid, infohash, port, callback) do
     GenServer.cast(pid, {:search_announce, infohash, port, callback})
   end
-
 
   def create_udp_socket(port, ip_vers) do
     ip_addr = ip_vers |> to_string() |> Kernel.<>("_addr") |> String.to_atom()
@@ -190,14 +186,12 @@ defmodule MlDHT.Server.Worker do
     {:noreply, state}
   end
 
-
   def handle_info(:change_secret, state) do
     Logger.debug "Change Secret"
     Process.send_after(self(), :change_secret, @time_change_secret)
 
     {:noreply, %{state | old_secret: state.secret, secret: Utils.gen_secret()}}
   end
-
 
   def handle_info({:udp, socket, ip, port, raw_data}, state) do
     # if Mix.env == :dev do
@@ -232,7 +226,6 @@ defmodule MlDHT.Server.Worker do
     {:noreply, state}
   end
 
-
   ########################
   # Incoming DHT Queries #
   ########################
@@ -245,7 +238,6 @@ defmodule MlDHT.Server.Worker do
 
     {:noreply, state}
   end
-
 
   def handle_message({:find_node, remote}, {socket, ip_vers}, ip, port, state) do
     Logger.debug "[#{Base.encode16(remote.node_id)}] >> find_node"
@@ -278,10 +270,8 @@ defmodule MlDHT.Server.Worker do
       :gen_udp.send(socket, ip, port, payload)
     end
 
-
     {:noreply, state}
   end
-
 
   ## Get_peers
   def handle_message({:get_peers, remote}, {socket, ip_vers}, ip, port, state) do
@@ -345,7 +335,6 @@ defmodule MlDHT.Server.Worker do
       {:noreply, state}
     end
   end
-
 
   ########################
   # Incoming DHT Replies #

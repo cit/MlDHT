@@ -29,11 +29,9 @@ defmodule MlDHT.RoutingTable.Node.Test do
     assert Process.alive?(state.pid) == false
   end
 
-
   test "if RoutingTable.Node returns socket correctly ", state do
     assert Node.socket(state.pid) == nil
   end
-
 
   test "if RoutingTable.Node returns node_id correctly ", state do
     assert Node.id(state.pid) == state.node_id
@@ -68,6 +66,5 @@ defmodule MlDHT.RoutingTable.Node.Test do
     Node.bucket_index(state.pid, 42)
     assert Node.bucket_index(state.pid) == 42
   end
-
 
 end

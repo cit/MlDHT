@@ -85,7 +85,6 @@ defmodule MlDHT.RoutingTable.Worker.Test do
     MlDHT.RoutingTable.Worker.del(@name, "BBBBBBBBBBBBBBBBBBBB")
   end
 
-
   test "if del() really deletes the node from the routing table" do
     MlDHT.RoutingTable.Worker.add(@name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
     node_pid = MlDHT.RoutingTable.Worker.get(@name, "BBBBBBBBBBBBBBBBBBBB")

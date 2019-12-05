@@ -66,7 +66,6 @@ defmodule MlDHT.RoutingTable.Distance do
     end
   end
 
-
   @doc """
   This function gets the number of bits and a node id as an argument and
   generates a new node id. It copies the number of bits from the given node id
@@ -79,6 +78,5 @@ defmodule MlDHT.RoutingTable.Distance do
 
     << bits :: size(nr_of_bits), rest :: size(nr_rest_bits)>>
   end
-
 
 end

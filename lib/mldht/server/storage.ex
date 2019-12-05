@@ -28,7 +28,6 @@ defmodule MlDHT.Server.Storage do
     GenServer.cast(pid, :print)
   end
 
-
   def has_nodes_for_infohash?(pid, infohash) do
     GenServer.call(pid, {:has_nodes_for_infohash?, infohash})
   end
@@ -36,7 +35,6 @@ defmodule MlDHT.Server.Storage do
   def get_nodes(pid, infohash) do
     GenServer.call(pid, {:get_nodes, infohash})
   end
-
 
   def handle_info(:review_storage, state) do
     Logger.debug "Review storage"
@@ -46,7 +44,6 @@ defmodule MlDHT.Server.Storage do
 
     {:noreply, review(Map.keys(state), state)}
   end
-
 
   def handle_call({:has_nodes_for_infohash?, infohash}, _from, state) do
     has_keys = Map.has_key?(state, infohash)
@@ -102,7 +99,6 @@ defmodule MlDHT.Server.Storage do
 
     {:noreply, state}
   end
-
 
   def review([], result), do: result
   def review([head | tail], result) do

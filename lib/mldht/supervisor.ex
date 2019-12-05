@@ -6,7 +6,7 @@ defmodule MlDHT.Supervisor do
 
   """
 
-  @doc false
+ @doc false
   # TODO: use Keyword.fetch!/2 to enforce the :node_id option
   def start_link(opts) do
     Supervisor.start_link(__MODULE__, {:ok, opts[:node_id]}, opts)
@@ -35,6 +35,5 @@ defmodule MlDHT.Supervisor do
 
     Supervisor.init(children, strategy: :one_for_one)
   end
-
 
 end

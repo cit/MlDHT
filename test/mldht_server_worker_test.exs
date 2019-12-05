@@ -11,7 +11,6 @@ defmodule MlDHT.Server.Worker.Test do
     assert new_state.secret != secret
   end
 
-
   test "if handle_info(:change_secret) saves the old secret" do
     secret = Utils.gen_secret()
     state = %{old_secret: nil, secret: secret}

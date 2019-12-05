@@ -55,7 +55,6 @@ defmodule MlDHT.RoutingTable.Bucket do
     %{bucket | nodes: nodes}
   end
 
-
   defimpl Inspect, for: Bucket do
     def inspect(bucket, _) do
       size  = Bucket.size(bucket)
@@ -74,6 +73,5 @@ defmodule MlDHT.RoutingTable.Bucket do
       end
     end
   end
-
 
 end

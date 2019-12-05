@@ -37,7 +37,6 @@ defmodule MlDHT.Server.Utils do
     |> List.to_tuple
   end
 
-
   @doc ~S"""
   This function generates a 160 bit (20 byte) random node id as a
   binary.
@@ -54,7 +53,5 @@ defmodule MlDHT.Server.Utils do
   TODO
   """
   def gen_secret, do: gen_node_id()
-
-
 
 end

@@ -26,25 +26,20 @@ defmodule MlDHT do
   """
   @type infohash :: binary
 
-
   @typedoc """
   A non negative integer (0--65565) which represents a TCP port number.
   """
   @type tcp_port :: 0..65565
-
 
   @typedoc """
   TODO
   """
   @type node_id :: <<_::20>>
 
-
   @typedoc """
   TODO
   """
   @type node_id_enc :: String.t()
-
-
 
   @doc false
   def start(_type, _args) do
@@ -66,15 +61,12 @@ defmodule MlDHT do
   @spec node_id() :: node_id
   def node_id, do: @node_id
 
-
   @doc ~S"""
   This function returns the generated node_id encoded as a String (40
   characters).
   """
   @spec node_id_enc() :: node_id_enc
   def node_id_enc, do: @node_id_enc
-
-
 
   @doc ~S"""
   This function needs an infohash as binary and a callback function as
@@ -95,8 +87,6 @@ defmodule MlDHT do
     MlDHT.Server.Worker.search(pid, infohash, callback)
   end
 
-
-
   @doc ~S"""
   This function needs an infohash as binary and callback function as
   parameter. This function does the same thing as the search/2 function, except
@@ -116,8 +106,6 @@ defmodule MlDHT do
     pid = @node_id_enc |> MlDHT.Registry.get_pid(MlDHT.Server.Worker)
     MlDHT.Server.Worker.search_announce(pid, infohash, callback)
   end
-
-
 
   @doc ~S"""
   This function needs an infohash as binary, a callback function as parameter,

@@ -107,7 +107,6 @@ defmodule MlDHT.RoutingTable.Worker do
      }}
   end
 
-
   @doc """
   This function gets called by an external timer. This function checks when was
   the last time a node has responded to our requests.
@@ -227,7 +226,6 @@ defmodule MlDHT.RoutingTable.Worker do
     {:reply, list, state}
   end
 
-
   @doc """
   This functiowe will ren returns the pid for a specific node id. If the node
   does not exists, it will try to add it to our routing table. Again, if this
@@ -236,7 +234,6 @@ defmodule MlDHT.RoutingTable.Worker do
   def handle_call({:get, node_id}, _from, state) do
     {:reply, get_node(state.cache, node_id), state}
   end
-
 
   @doc """
   This function returns the number of nodes in our routing table as an integer.
@@ -255,7 +252,6 @@ defmodule MlDHT.RoutingTable.Worker do
   def handle_call(:cache_size, _from, state) do
     {:reply, :ets.tab2list(state.cache) |> Enum.count(), state}
   end
-
 
   @doc """
   Without parameters this function returns our own node id. If this function
@@ -281,7 +277,6 @@ defmodule MlDHT.RoutingTable.Worker do
     {:reply, :ok, %{state | :buckets => new_bucket}}
   end
 
-
   @doc """
   This function update the last_update time value in the bucket.
   """
@@ -295,8 +290,6 @@ defmodule MlDHT.RoutingTable.Worker do
 
     {:noreply, %{state | :buckets => new_buckets}}
   end
-
-
 
   @doc """
   This function tries to add a new node to our routing table. If it was
@@ -412,7 +405,6 @@ defmodule MlDHT.RoutingTable.Worker do
        _e in Enum.EmptyError -> nil
     end
   end
-
 
   @doc """
   Returns the index of the last bucket as integer.
