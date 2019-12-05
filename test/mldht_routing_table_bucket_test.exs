@@ -17,14 +17,24 @@ defmodule MlDHT.RoutingTable.Bucket.Test do
     assert Bucket.size(bucket) == 3
   end
 
-  test "is_full?/1 function" do
-    assert Bucket.new(0) |> Bucket.add([1,2,3,4,5,6])     |> Bucket.is_full? == false
-    assert Bucket.new(0) |> Bucket.add([1,2,3,4,5,6,7,8]) |> Bucket.is_full? == true
+  test "if is_full?/1 returns false when only 6 elements are added" do
+    list_half_full = [1, 2, 3, 4, 5, 6]
+    assert Bucket.new(0) |> Bucket.add(list_half_full) |> Bucket.is_full? == false
   end
 
-  test "has_space?/1 function" do
-    assert Bucket.new(0) |> Bucket.add([1,2,3,4,5,6])     |> Bucket.has_space? == true
-    assert Bucket.new(0) |> Bucket.add([1,2,3,4,5,6,7,8]) |> Bucket.has_space? == false
+  test "if is_full?/1 returns true when only 8 elements are added" do
+      list_full = [1, 2, 3, 4, 5, 6, 7, 8]
+      assert Bucket.new(0) |> Bucket.add(list_full) |> Bucket.is_full? == true
+  end
+
+  test "if has_space?/1 returns true when only 6 elements are added" do
+    list_half_full = [1, 2, 3, 4, 5, 6]
+    assert Bucket.new(0) |> Bucket.add(list_half_full) |> Bucket.has_space? == true
+  end
+
+  test "if has_space?/1 returns false when only 8 elements are added" do
+    list_full = [1, 2, 3, 4, 5, 6, 7, 8]
+    assert Bucket.new(0) |> Bucket.add(list_full) |> Bucket.has_space? == false
   end
 
   test "if age/1 works correctly with waiting one second" do
