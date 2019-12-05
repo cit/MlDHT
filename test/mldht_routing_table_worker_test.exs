@@ -22,12 +22,6 @@ defmodule MlDHT.RoutingTable.Worker.Test do
     [node_id: node_id, node_id_enc: node_id_enc, rt_name: rt_name]
   end
 
-  # INFO: This function is deprecated
-  # test "If the function node_id can set and get the node_id" do
-  #   RoutingTable.Worker.node_id(@name, "BB")
-  #   assert RoutingTable.Worker.node_id(@name) == "BB"
-  # end
-
   test "If the size of the table is 0 if we add and delete a node" do
     MlDHT.RoutingTable.Worker.add(@name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
     assert MlDHT.RoutingTable.Worker.size(@name) == 1
@@ -44,38 +38,6 @@ defmodule MlDHT.RoutingTable.Worker.Test do
 
     MlDHT.RoutingTable.Worker.del(@name, "BBBBBBBBBBBBBBBBBBBB")
   end
-
-  # test "foo" do
-  #   nodes = [
-  #     "32F54E697351FF4AEC29CDBAABF2FBE3467CC267",
-  #     "93990A2BE65C366458EF03ACB48680AE83D2AD94",
-  #     "9399182C807EC599D5E980B2EAC9CC53BF67D69D",
-  #     "93991B09293CE71A85B44D0578D576B9D09CC095",
-  #     "91478CDBD190E87D21C273F493957590A78D2B50",
-  #     "93991F40B451BE18D727BFCAE0EA1722FD65732A",
-  #     "9077C97800E42B0757E4F39FF8DD9E3E8AB67675",
-  #     "96CB5CEA7C9FB775C1FB74DE0121D7A11309ECC7",
-  #     "527429EE61360B9D6A69BCCE493FB12250BE7ECE",
-  #     "A14E7753748539120787BCE2B9815CC80AF3174C",
-  #     "003E8F4139A0174FB0F1983B87D76DFACD29B783",
-  #     "93990647DEB3124DC843BB8BA61F035A7D093806",
-  #   ]
-
-  #   ## set a real node id
-  #   RoutingTable.Worker.node_id(@name, Base.decode16!("FC8A15A2FAF2734DBB1DC5F7AFDC5C9BEAEB1F59"))
-
-  #   ## add all nodes
-  #   Enum.map(nodes, fn(x) ->
-  #     RoutingTable.Worker.add(@name, Base.decode16!(x), {{127, 0, 0, 1}, 6881}, 23)
-  #   end)
-
-  #   RoutingTable.Worker.print(@name)
-  #   RoutingTable.Worker.closest_nodes(@name, Base.decode16!("DAC8FAC14C12BB46E25F15D810BBD14267AD4ECA"))
-
-  #   # Enum.map(nodes, fn(x) -> RoutingTable.Worker.del(@name, Base.decode16!(x)) end)
-  #   # RoutingTable.Worker.print
-  #   RoutingTable.Worker.node_id(@name, "AA")
-  # end
 
   test "Double entries" do
     MlDHT.RoutingTable.Worker.add(@name, "BBBBBBBBBBBBBBBBBBBB", {{127, 0, 0, 1}, 6881}, 23)
