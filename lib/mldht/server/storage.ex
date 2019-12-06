@@ -69,7 +69,7 @@ defmodule MlDHT.Server.Storage do
         index = state
         |> Map.get(infohash)
         |> Enum.find_index(fn(node_tuple) ->
-          Tuple.delete_at(node_tuple,2) == {ip, port}
+          Tuple.delete_at(node_tuple, 2) == {ip, port}
         end)
 
         if index do
