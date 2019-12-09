@@ -30,7 +30,8 @@ defmodule MlDHT.Mixfile do
     [{:bencodex,      "~> 1.0.0"},
      {:krpc_protocol, "~> 0.0.5"},
      {:ex_doc,        "~> 0.19",  only: :dev},
-     {:pretty_hex,    "~> 0.0.1", only: :dev}
+     {:pretty_hex,    "~> 0.0.1", only: :dev},
+     {:dialyxir,      "~> 0.5.1", only: [:dev, :test]}
     ]
   end
 
