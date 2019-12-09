@@ -9,11 +9,11 @@ defmodule MlDHT.Supervisor do
  @doc false
   # TODO: use Keyword.fetch!/2 to enforce the :node_id option
   def start_link(opts) do
-    Supervisor.start_link(__MODULE__, {:ok, opts[:node_id]}, opts)
+    Supervisor.start_link(__MODULE__, opts[:node_id], opts)
   end
 
   @impl true
-  def init({:ok, node_id}) do
+  def init(node_id) do
     node_id_enc = node_id |> Base.encode16()
 
     children = [
