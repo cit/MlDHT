@@ -114,22 +114,8 @@ defmodule MlDHT.RoutingTable.Worker do
   def handle_info(:review, state) do
     new_buckets = Enum.map(state.buckets, fn(bucket) ->
       Bucket.filter(bucket, fn(pid) ->
-        time = Node.last_time_responded(pid)
-        cond do
-          time < @response_time ->
-            Node.send_ping(pid)
-
-          time >= @response_time and Node.is_good?(pid) ->
-            Node.goodness(pid, :questionable)
-            Node.send_ping(pid)
-
-          time >= @response_time and Node.is_questionable?(pid) ->
-            Logger.debug "[#{Base.encode16 Node.id(pid)}] Deleted"
-            :ets.delete(state.cache, Node.id(pid))
-            Node.stop(pid)
-            false
-        end
-
+        Node.last_time_responded(pid)
+        |> evaluate_node(state.cache, pid)
       end)
     end)
 
@@ -293,6 +279,25 @@ defmodule MlDHT.RoutingTable.Worker do
   # Private Functions #
   #####################
 
+  # @spec evaluate_node(number, cache, pid) :: {true, false}
+  def evaluate_node(time, cache, pid) do
+    cond do
+      time < @response_time ->
+        Node.send_ping(pid)
+        true
+
+      time >= @response_time and Node.is_good?(pid) ->
+        Node.goodness(pid, :questionable)
+        Node.send_ping(pid)
+        true
+
+      time >= @response_time and Node.is_questionable?(pid) ->
+        Logger.debug "[#{Base.encode16 Node.id(pid)}] Deleted"
+        :ets.delete(cache, Node.id(pid))
+        Node.stop(pid)
+        false
+    end
+  end
 
   def find_node_on_random_node(target, state) do
     case random_node(state.cache) do
@@ -327,10 +332,6 @@ defmodule MlDHT.RoutingTable.Worker do
       ## If the bucket has still some space left, we can just add the node to
       ## the bucket. Easy Peasy
       Bucket.has_space?(bucket) ->
-        # TODO: register nodes in a registry instead of storing the pid in a bucket.
-        # (the pid won't be the same after a process has been restarted by a supervisor)
-        # name = MlDHT.Registry.via(..)
-
         node_child = {Node, own_node_id: my_node_id, node_tuple: node_tuple,
                       bucket_index: index}
 
