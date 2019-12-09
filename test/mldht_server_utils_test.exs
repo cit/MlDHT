@@ -12,8 +12,4 @@ defmodule MlDHT.Server.Utils.Test do
     assert Utils.tuple_to_ipstr({8193, 16_848, 12, 1452, 5, 0, 0, 1}, 6881) == ip_str
   end
 
-  test "IPv4 address with ipstr_to_tuple/1" do
-    assert Utils.ipstr_to_tuple("127.0.0.1") == {127, 0, 0, 1}
-  end
-
 end

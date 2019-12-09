@@ -25,22 +25,10 @@ defmodule MlDHT.Server.Utils do
   end
 
   @doc ~S"""
-  This function gets an IPv4 address as binary and converts it to a tuple.
-
-    ## Example
-    iex> MlDHT.Server.Utils.ipstr_to_tuple("127.0.0.1")
-    {127, 0, 0, 1}
-  """
-  def ipstr_to_tuple(ip_str) do
-    String.split(ip_str, ".")
-    |> Enum.map(fn(x) -> String.to_integer(x) end)
-    |> List.to_tuple
-  end
-
-  @doc ~S"""
   This function generates a 160 bit (20 byte) random node id as a
   binary.
   """
+  @spec gen_node_id :: Types.node_id
   def gen_node_id do
     :rand.seed(:exs64, :os.timestamp)
 
