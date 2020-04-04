@@ -251,14 +251,22 @@ defmodule MlDHT.RoutingTable.Worker do
   end
 
   @doc """
-  This function tries to add a new node to our routing table. If it was
-  sucessful, it returns the node pid and if not it will return nil.
+  This function tries to add a new node to our routing table. It does not add
+  the node to the routing table if the node is already in the routing table or
+  if the node_id is equal to our own node_id. In this case the function will
+  return nil. Otherwise, we will add it to our routing table and return the node
+  pid.
   """
   def handle_cast({:add, node_id, address, socket}, state) do
-    if node_exists?(state.cache, node_id) do
-      {:noreply, state}
-    else
-      {:noreply, add_node(state, {node_id, address, socket})}
+    cond do
+      # This is our own node id
+      node_id == state.node_id ->
+        {:noreply, state}
+      # We have this node already in our table
+      node_exists?(state.cache, node_id) ->
+        {:noreply, state}
+      true ->
+        {:noreply, add_node(state, {node_id, address, socket})}
     end
   end
 
