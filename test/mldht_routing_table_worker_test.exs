@@ -133,4 +133,13 @@ defmodule MlDHT.RoutingTable.Worker.Test do
     assert length(list) == 3
   end
 
+  test "if routing table ignores its own node_id", test_worker_context do
+    node_id = test_worker_context.node_id
+    MlDHT.RoutingTable.Worker.add(@name, node_id, {{127, 0, 0, 1}, 6881}, 23)
+    MlDHT.RoutingTable.Worker.add(@name, "CCCCCCCCCCCCCCCCCCCC", {{127, 0, 0, 1}, 6881}, 23)
+    MlDHT.RoutingTable.Worker.add(@name, "DDDDDDDDDDDDDDDDDDDD", {{127, 0, 0, 1}, 6881}, 23)
+
+    assert MlDHT.RoutingTable.Worker.size(@name) == 2
+  end
+
 end
