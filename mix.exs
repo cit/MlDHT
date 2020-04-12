@@ -22,7 +22,9 @@ defmodule MlDHT.Mixfile do
          {"32F54E697351FF4AEC29CDBAABF2FBE3467CC267", "router.bittorrent.com",  6881},
          {"EBFF36697351FF4AEC29CDBAABF2FBE3467CC267", "router.utorrent.com",    6881},
          {"9F08E1074F1679137561BAFE2CF62A73A8AFADC7", "dht.transmissionbt.com", 6881},
-       ]],
+       ],
+       k_bucket_size: 8,
+     ],
      applications: [:logger]]
   end
 

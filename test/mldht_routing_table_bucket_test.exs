@@ -37,6 +37,21 @@ defmodule MlDHT.RoutingTable.Bucket.Test do
     assert Bucket.new(0) |> Bucket.add(list_full) |> Bucket.has_space? == false
   end
 
+  test "if different value for k_bucket_size" do
+    default_k = Application.get_env(:mldht, :k_bucket_size)
+    new_k     = 20
+
+    # Set a new value of k
+    Application.put_env(:mldht, :k_bucket_size, new_k)
+
+    # Test if the bucket has space if we add as much nodes as the new bucket size
+    list_full = 1..new_k |> Enum.to_list()
+    assert Bucket.new(0) |> Bucket.add(list_full) |> Bucket.has_space? == false
+
+    # Set previous default value of k for the other tests
+    Application.put_env(:mldht, :k_bucket_size, default_k)
+  end
+
   test "if age/1 works correctly with waiting one second" do
     bucket = Bucket.new(0)
     :timer.sleep(1000)
