@@ -18,22 +18,22 @@ defmodule MlDHT.RoutingTable.Bucket.Test do
   end
 
   test "if is_full?/1 returns false when only 6 elements are added" do
-    list_half_full = [1, 2, 3, 4, 5, 6]
+    list_half_full = 1..6 |> Enum.to_list()
     assert Bucket.new(0) |> Bucket.add(list_half_full) |> Bucket.is_full? == false
   end
 
   test "if is_full?/1 returns true when only 8 elements are added" do
-      list_full = [1, 2, 3, 4, 5, 6, 7, 8]
-      assert Bucket.new(0) |> Bucket.add(list_full) |> Bucket.is_full? == true
+    list_full = 1..8 |> Enum.to_list()
+    assert Bucket.new(0) |> Bucket.add(list_full) |> Bucket.is_full? == true
   end
 
   test "if has_space?/1 returns true when only 6 elements are added" do
-    list_half_full = [1, 2, 3, 4, 5, 6]
+    list_half_full = 1..6 |> Enum.to_list()
     assert Bucket.new(0) |> Bucket.add(list_half_full) |> Bucket.has_space? == true
   end
 
   test "if has_space?/1 returns false when only 8 elements are added" do
-    list_full = [1, 2, 3, 4, 5, 6, 7, 8]
+    list_full = 1..8 |> Enum.to_list()
     assert Bucket.new(0) |> Bucket.add(list_full) |> Bucket.has_space? == false
   end
 
