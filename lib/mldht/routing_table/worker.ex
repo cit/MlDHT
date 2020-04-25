@@ -31,8 +31,8 @@ defmodule MlDHT.RoutingTable.Worker do
   ## 3 minutes
   @bucket_maintenance_time 3 * @min_in_sec
 
-  ## 15 minutes (in seconds)
-  @bucket_max_idle_time 15 * @min_in_sec
+  ## 15 minutes (in seconds!!!)
+  @bucket_max_idle_time 15 * 60
 
   ##############
   # Public API #
