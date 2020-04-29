@@ -354,14 +354,7 @@ defmodule MlDHT.Server.Worker do
 
     case MlDHT.Registry.get_pid(state.node_id_enc, Search, tid_enc) do
       nil -> Logger.debug "[#{Base.encode16(remote.node_id)}] ignore unknown tid: #{tid_enc} "
-      pid ->
-      ## If this belongs to an active search, it is actual a get_peers_reply
-      ## without a token.
-      if Process.alive?(pid) and Search.type(pid) == :get_peers do
-        handle_message({:get_peer_reply, remote}, {socket, ip_vers}, ip, port, state)
-      else
-        Process.alive?(pid) and Search.handle_reply(pid, remote, remote.nodes)
-      end
+      pid -> Search.handle_reply(pid, remote, remote.nodes)
     end
 
     ## Ping all nodes
