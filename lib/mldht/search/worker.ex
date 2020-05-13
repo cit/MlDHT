@@ -139,8 +139,7 @@ defmodule MlDHT.Search.Worker do
     ## information and call the callback function.
     if remote.values, do: Enum.each(remote.values, state.callback)
 
-    state = %{state | nodes: old_nodes}
-    {:noreply, state}
+    {:noreply, %{state | nodes: old_nodes}}
   end
 
   def handle_cast({:handle_reply, remote, nodes}, state) do

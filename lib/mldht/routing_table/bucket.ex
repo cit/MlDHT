@@ -11,7 +11,7 @@ defmodule MlDHT.RoutingTable.Bucket do
   @k_bucket 8
 
   def new(index) do
-    %Bucket{index: index, last_update: :os.system_time(:seconds)}
+    %Bucket{index: index, last_update: :os.system_time(:millisecond)}
   end
 
   def size(bucket) do
@@ -19,7 +19,7 @@ defmodule MlDHT.RoutingTable.Bucket do
   end
 
   def age(bucket) do
-    :os.system_time(:seconds) - bucket.last_update
+    :os.system_time(:millisecond) - bucket.last_update
   end
 
   def is_full?(bucket) do

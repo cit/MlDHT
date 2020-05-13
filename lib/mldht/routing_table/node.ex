@@ -99,7 +99,7 @@ defmodule MlDHT.RoutingTable.Node do
        :goodness     => :good,
 
        ## Timer
-       :last_response_rcv => :os.system_time(:seconds),
+       :last_response_rcv => :os.system_time(:millisecond),
        :last_query_rcv    => 0,
        :last_query_snd    => 0
      }
@@ -139,7 +139,7 @@ defmodule MlDHT.RoutingTable.Node do
   end
 
   def handle_call(:last_time_responded, _from, state) do
-    {:reply, :os.system_time(:seconds) - state.last_response_rcv, state}
+    {:reply, :os.system_time(:millisecond) - state.last_response_rcv, state}
   end
 
   def handle_call(:last_time_queried, _from, state) do
@@ -158,7 +158,7 @@ defmodule MlDHT.RoutingTable.Node do
   end
 
   def handle_call({:update, key}, _from, state) do
-    {:reply, :ok, Map.put(state, key, :os.system_time(:seconds))}
+    {:reply, :ok, Map.put(state, key, :os.system_time(:millisecond))}
   end
 
   def handle_cast({:bucket_index, new_index}, state) do
@@ -175,7 +175,7 @@ defmodule MlDHT.RoutingTable.Node do
     payload = KRPCProtocol.encode(:ping, node_id: state.own_node_id)
     :gen_udp.send(state.socket, state.ip, state.port, payload)
 
-    {:noreply, %{state | :last_query_snd => :os.system_time(:seconds)}}
+    {:noreply, %{state | :last_query_snd => :os.system_time(:millisecond)}}
   end
 
   def handle_cast({:send_find_node, target}, state) do
@@ -185,7 +185,7 @@ defmodule MlDHT.RoutingTable.Node do
                                   target: target)
     :gen_udp.send(state.socket, state.ip, state.port, payload)
 
-    {:noreply, %{state | :last_query_snd => :os.system_time(:seconds)}}
+    {:noreply, %{state | :last_query_snd => :os.system_time(:millisecond)}}
   end
 
   ###########

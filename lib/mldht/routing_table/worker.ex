@@ -16,23 +16,23 @@ defmodule MlDHT.RoutingTable.Worker do
   # Constants #
   #############
 
-  ## One minute
-  @min_in_sec 60 * 1000
+  ## One minute in milliseconds
+  @min_in_ms 60 * 1000
 
   ## 5 Minutes
-  @review_time 5 * @min_in_sec
+  @review_time 5 * @min_in_ms
 
   ## 5 minutes
-  @response_time 5 * @min_in_sec
+  @response_time 5 * @min_in_ms
 
   ## 5 minutes
-  @neighbourhood_maintenance_time 5 * @min_in_sec
+  @neighbourhood_maintenance_time 5 * @min_in_ms
 
   ## 3 minutes
-  @bucket_maintenance_time 3 * @min_in_sec
+  @bucket_maintenance_time 3 * @min_in_ms
 
-  ## 15 minutes (in seconds!!!)
-  @bucket_max_idle_time 15 * 60
+  ## 15 minutes
+  @bucket_max_idle_time 15 * @min_in_ms
 
   ##############
   # Public API #

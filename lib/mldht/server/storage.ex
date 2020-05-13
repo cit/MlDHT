@@ -5,11 +5,18 @@ defmodule MlDHT.Server.Storage do
 
   require Logger
 
+  #############
+  # Constants #
+  #############
+
+  ## One minute in milliseconds
+  @min_in_ms 60 * 1000
+
   ## 5 Minutes
-  @review_time 60 * 5
+  @review_time 5 * @min_in_ms
 
   ## 30 Minutes
-  @node_expired 60 * 30
+  @node_expired 30 * @min_in_ms
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, [], opts)
@@ -109,7 +116,7 @@ defmodule MlDHT.Server.Storage do
   def delete_old_nodes(state, infohash) do
     Map.update!(state, infohash, fn(list) ->
       Enum.filter(list, fn(x) ->
-        (:os.system_time(:seconds) - elem(x, 2)) <= @node_expired
+        (:os.system_time(:millisecond) - elem(x, 2)) <= @node_expired
       end)
     end)
   end

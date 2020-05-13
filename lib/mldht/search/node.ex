@@ -5,6 +5,6 @@ defmodule MlDHT.Search.Node do
     request_sent: 0, responded: false
 
   def last_time_requested(node) do
-    :os.system_time(:seconds) - node.request_sent
+    :os.system_time(:millisecond) - node.request_sent
   end
 end
