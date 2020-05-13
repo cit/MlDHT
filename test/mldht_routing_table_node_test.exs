@@ -54,6 +54,11 @@ defmodule MlDHT.RoutingTable.Node.Test do
     assert Node.is_questionable?(state.pid) == true
   end
 
+  test "if goodness()/1 returns :questionable after change", state do
+    Node.goodness(state.pid, :questionable)
+    assert Node.goodness(state.pid) == :questionable
+  end
+
   test "if RoutingTable.Node returns bucket_index correctly ", state do
     assert Node.bucket_index(state.pid) == 23
   end
@@ -65,6 +70,12 @@ defmodule MlDHT.RoutingTable.Node.Test do
   test "if RoutingTable.Node returns bucket_index correctly after change ", state do
     Node.bucket_index(state.pid, 42)
     assert Node.bucket_index(state.pid) == 42
+  end
+
+  test "if to_string/0 returns correct string ", state do
+    str = "#Node<id: " <> state.node_id_enc <> ", goodness: questionable>"
+    Node.goodness(state.pid, :questionable)
+    assert Node.to_string(state.pid) == str
   end
 
 end
