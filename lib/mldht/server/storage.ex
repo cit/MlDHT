@@ -23,7 +23,7 @@ defmodule MlDHT.Server.Storage do
   end
 
   def init([]) do
-    Process.send_after(self(), :review_storage, @review_time * 1000)
+    Process.send_after(self(), :review_storage, @review_time)
     {:ok, %{}}
   end
 
@@ -47,7 +47,7 @@ defmodule MlDHT.Server.Storage do
     Logger.debug "Review storage"
 
     ## Restart review timer
-    Process.send_after(self(), :review_storage, @review_time * 1000)
+    Process.send_after(self(), :review_storage, @review_time)
 
     {:noreply, review(Map.keys(state), state)}
   end
@@ -69,7 +69,7 @@ defmodule MlDHT.Server.Storage do
   end
 
   def handle_cast({:put, infohash, ip, port}, state) do
-    item = {ip, port, :os.system_time(:seconds)}
+    item = {ip, port, :os.system_time(:millisecond)}
 
     new_state =
       if Map.has_key?(state, infohash) do

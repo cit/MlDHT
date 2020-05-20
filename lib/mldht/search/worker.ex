@@ -201,7 +201,7 @@ defmodule MlDHT.Search.Worker do
 
     new_nodes = state.nodes
     |> update_nodes(node.id, :requested, &(&1.requested + 1))
-    |> update_nodes(node.id, :request_sent, fn(_) -> :os.system_time(:seconds) end)
+    |> update_nodes(node.id, :request_sent, fn(_) -> :os.system_time(:millisecond) end)
 
     send_queries(rest, %{state | nodes: new_nodes})
   end
