@@ -78,4 +78,11 @@ defmodule MlDHT.RoutingTable.Node.Test do
     assert Node.to_string(state.pid) == str
   end
 
+  test "if response_received/1 sets goodness to :good again", state do
+    Node.goodness(state.pid, :questionable)
+    Node.response_received(state.pid)
+
+    assert Node.goodness(state.pid) == :good
+  end
+
 end

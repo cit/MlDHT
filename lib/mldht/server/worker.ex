@@ -457,7 +457,7 @@ defmodule MlDHT.Server.Worker do
     rtable = node_id |> get_rtable(ip_vers)
 
     if node_pid = MlDHT.RoutingTable.Worker.get(rtable, remote_node_id) do
-      Node.update(node_pid, :last_query_rcv)
+      Node.query_received(node_pid)
       index = Node.bucket_index(node_pid)
       MlDHT.RoutingTable.Worker.update_bucket(rtable, index)
     else
@@ -469,7 +469,7 @@ defmodule MlDHT.Server.Worker do
     rtable = node_id |> get_rtable(ip_vers)
 
     if node_pid = MlDHT.RoutingTable.Worker.get(rtable, remote_node_id) do
-      Node.update(node_pid, :last_response_rcv)
+      Node.response_received(node_pid)
       index = Node.bucket_index(node_pid)
       MlDHT.RoutingTable.Worker.update_bucket(rtable, index)
     else

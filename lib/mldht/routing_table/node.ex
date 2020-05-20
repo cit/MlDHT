@@ -61,8 +61,12 @@ defmodule MlDHT.RoutingTable.Node do
     GenServer.cast(pid, {:send_get_peers_reply, tid, nodes, token})
   end
 
-  def update(pid, key) do
-    GenServer.call(pid, {:update, key})
+  def response_received(pid) do
+    GenServer.cast(pid, {:response_received})
+  end
+
+  def query_received(pid) do
+    GenServer.cast(pid, {:query_received})
   end
 
   def last_time_responded(pid) do
@@ -157,8 +161,15 @@ defmodule MlDHT.RoutingTable.Node do
     {:reply, str, state}
   end
 
-  def handle_call({:update, key}, _from, state) do
-    {:reply, :ok, Map.put(state, key, :os.system_time(:millisecond))}
+  # If we receive a response to our query and the goodness value is
+  # :questionable, we set it back to :good
+  def handle_cast({:response_received}, state) do
+    {:noreply, %{state | :last_response_rcv => :os.system_time(:millisecond),
+                         :goodness => :good}}
+  end
+
+  def handle_cast({:query_received}, state) do
+    {:noreply, %{state | :last_query_rcv => :os.system_time(:millisecond)}}
   end
 
   def handle_cast({:bucket_index, new_index}, state) do

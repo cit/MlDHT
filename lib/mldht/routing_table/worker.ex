@@ -16,14 +16,14 @@ defmodule MlDHT.RoutingTable.Worker do
   # Constants #
   #############
 
-  ## One minute in milliseconds
+  ## One minute in mi
   @min_in_ms 60 * 1000
 
   ## 5 Minutes
   @review_time 5 * @min_in_ms
 
   ## 5 minutes
-  @response_time 5 * @min_in_ms
+  @response_time 15 * @min_in_ms
 
   ## 5 minutes
   @neighbourhood_maintenance_time 5 * @min_in_ms
