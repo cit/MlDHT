@@ -234,7 +234,7 @@ defmodule MlDHT.Server.Worker do
     Logger.debug "[#{Base.encode16(remote.node_id)}] >> ping"
     query_received(remote.node_id, state.node_id, {ip, port}, {socket, ip_vers})
 
-    send_ping_reply(remote.node_id, remote.tid, ip, port, socket)
+    send_ping_reply(state.node_id, remote.tid, ip, port, socket)
 
     {:noreply, state}
   end
@@ -322,7 +322,7 @@ defmodule MlDHT.Server.Worker do
       Storage.put(storage_pid, remote.info_hash, ip, port)
 
       ## Sending a ping_reply back as an acknowledgement
-      send_ping_reply(remote.node_id, remote.tid, ip, port, socket)
+      send_ping_reply(state.node_id, remote.tid, ip, port, socket)
 
       {:noreply, state}
     else

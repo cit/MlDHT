@@ -36,4 +36,22 @@ defmodule MlDHT.Test do
     assert_receive {:called_back, :pong}, 40_000
   end
 
+  test "if node returns correct ping_reply message when receiving a ping message" do
+    rcv_node_id = MlDHT.node_id()
+    snd_node_id = String.duplicate("B", 20)
+    host = {127, 0, 0, 1}
+    port = Application.get_env(:mldht, :port, nil)
+
+    {:ok, socket} = :gen_udp.open(0, [:binary, {:active, false}])
+
+    payload = KRPCProtocol.encode(:ping, tid: "AA", node_id: snd_node_id)
+    :gen_udp.send(socket, host, port, payload)
+
+    {:ok, {_ip, _port, reply}} = :gen_udp.recv(socket, 0)
+    {:ping_reply, %{node_id: node_id, tid: tid}} = KRPCProtocol.decode(reply)
+
+    assert node_id == rcv_node_id
+    assert tid == "AA"
+  end
+
 end
